@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from io import BytesIO
 import json
 import re
+import subprocess
+import uuid
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
+
+from pypdf import PdfReader
 
 from .pdf_engine import convert_pdf
 
@@ -13,6 +18,7 @@ from .pdf_engine import convert_pdf
 ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = ROOT / "static"
 UPLOAD_DIR = ROOT / "work" / "uploads"
+PREVIEW_DIR = ROOT / "work" / "previews"
 OUTPUT_DIR = ROOT / "output"
 HOST = "127.0.0.1"
 PORT = 8765
@@ -20,6 +26,13 @@ PORT = 8765
 
 class BookletRequestHandler(BaseHTTPRequestHandler):
     server_version = "BookletMaker/0.1"
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self._send_cors_headers()
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
 
     def do_HEAD(self) -> None:
         if self.path == "/":
@@ -30,6 +43,7 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(path.stat().st_size))
+            self._send_cors_headers()
             self.end_headers()
             return
 
@@ -62,13 +76,24 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
             self._send_file(OUTPUT_DIR / Path(filename).name, "application/pdf")
             return
 
+        if self.path.startswith("/previews/"):
+            self._send_preview_page()
+            return
+
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
     def do_POST(self) -> None:
-        if self.path != "/convert":
-            self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+        if self.path == "/convert":
+            self._handle_convert()
             return
 
+        if self.path == "/inspect":
+            self._handle_inspect()
+            return
+
+        self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+
+    def _handle_convert(self) -> None:
         try:
             fields, files = self._read_multipart()
             upload = files.get("pdf")
@@ -97,6 +122,79 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
                     "downloadUrl": f"/outputs/{output_name}",
                 }
             )
+        except Exception as exc:
+            self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+
+    def _handle_inspect(self) -> None:
+        try:
+            _fields, files = self._read_multipart()
+            upload = files.get("pdf")
+            if upload is None or not upload["data"]:
+                raise ValueError("PDF file is required")
+
+            preview_id = uuid.uuid4().hex
+            PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+            source_path = PREVIEW_DIR / f"{preview_id}.pdf"
+            source_path.write_bytes(upload["data"])
+
+            reader = PdfReader(BytesIO(upload["data"]))
+            page_count = len(reader.pages)
+            if page_count <= 0:
+                raise ValueError("PDF has no pages")
+
+            self._send_json(
+                {
+                    "ok": True,
+                    "previewId": preview_id,
+                    "pageCount": page_count,
+                    "filename": upload["filename"],
+                }
+            )
+        except Exception as exc:
+            self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+
+    def _send_preview_page(self) -> None:
+        match = re.fullmatch(r"/previews/([a-f0-9]+)/([0-9]+)\.png", self.path)
+        if not match:
+            self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+            return
+
+        try:
+            preview_id = match.group(1)
+            page_number = int(match.group(2))
+            source_path = PREVIEW_DIR / f"{preview_id}.pdf"
+            if not source_path.exists():
+                self.send_error(HTTPStatus.NOT_FOUND, "Preview PDF not found")
+                return
+
+            reader = PdfReader(str(source_path))
+            if page_number < 1 or page_number > len(reader.pages):
+                self.send_error(HTTPStatus.NOT_FOUND, "Preview page not found")
+                return
+
+            output_base = PREVIEW_DIR / f"{preview_id}-{page_number}"
+            output_path = output_base.with_suffix(".png")
+            if not output_path.exists():
+                subprocess.run(
+                    [
+                        "pdftoppm",
+                        "-png",
+                        "-singlefile",
+                        "-f",
+                        str(page_number),
+                        "-l",
+                        str(page_number),
+                        "-r",
+                        "120",
+                        str(source_path),
+                        str(output_base),
+                    ],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+
+            self._send_file(output_path, "image/png")
         except Exception as exc:
             self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
 
@@ -147,6 +245,7 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(payload)))
+        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(payload)
 
@@ -155,8 +254,12 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
+        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(raw)
+
+    def _send_cors_headers(self) -> None:
+        self.send_header("Access-Control-Allow-Origin", "*")
 
 
 def _find_header(header_text: str, header_name: str) -> str:
