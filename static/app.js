@@ -8,7 +8,8 @@ const resultBox = document.querySelector("[data-result]");
 const previewEmpty = document.querySelector("[data-preview-empty]");
 const previewName = document.querySelector("[data-preview-name]");
 const previewImage = document.querySelector("[data-preview-image]");
-const pageNav = document.querySelector("[data-page-nav]");
+const pageIndicator = document.querySelector("[data-page-indicator]");
+const previewFrame = document.querySelector("[data-preview-frame]");
 
 const API_BASE = window.location.protocol === "file:" ? "http://127.0.0.1:8765" : "";
 let previewRequestId = 0;
@@ -30,8 +31,8 @@ async function setFile(file) {
   resultBox.hidden = true;
   statusBox.textContent = "미리보기를 준비 중입니다.";
   previewState = null;
-  pageNav.hidden = true;
-  pageNav.innerHTML = "";
+  pageIndicator.hidden = true;
+  pageIndicator.textContent = "1/1";
   previewImage.hidden = true;
   previewImage.removeAttribute("src");
   previewEmpty.hidden = false;
@@ -55,7 +56,6 @@ async function setFile(file) {
       currentPage: 1,
     };
 
-    renderPageNav();
     showPreviewPage(1);
     statusBox.textContent = "";
   } catch (error) {
@@ -124,34 +124,43 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-function renderPageNav() {
+previewFrame.addEventListener("click", (event) => {
   if (!previewState) return;
 
-  pageNav.innerHTML = "";
-  for (let page = 1; page <= previewState.pageCount; page += 1) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = String(page);
-    button.className = "page-nav-button";
-    button.setAttribute("aria-label", `${page}페이지 보기`);
-    button.addEventListener("click", () => showPreviewPage(page));
-    pageNav.append(button);
+  const bounds = previewFrame.getBoundingClientRect();
+  const clickX = event.clientX - bounds.left;
+  if (clickX < bounds.width / 2) {
+    showPreviewPage(previewState.currentPage - 1);
+  } else {
+    showPreviewPage(previewState.currentPage + 1);
   }
-  pageNav.hidden = false;
-}
+});
+
+previewFrame.addEventListener("keydown", (event) => {
+  if (!previewState) return;
+
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    showPreviewPage(previewState.currentPage - 1);
+  }
+
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+    showPreviewPage(previewState.currentPage + 1);
+  }
+});
 
 function showPreviewPage(page) {
   if (!previewState) return;
 
-  previewState.currentPage = page;
-  previewName.textContent = `${fileInput.files[0].name} · ${page}/${previewState.pageCount}페이지`;
-  previewImage.src = `${API_BASE}/previews/${previewState.id}/${page}.png`;
+  const nextPage = Math.min(Math.max(page, 1), previewState.pageCount);
+  previewState.currentPage = nextPage;
+  previewName.textContent = fileInput.files[0].name;
+  pageIndicator.textContent = `${nextPage}/${previewState.pageCount}`;
+  pageIndicator.hidden = false;
+  previewImage.src = `${API_BASE}/previews/${previewState.id}/${nextPage}.png`;
   previewImage.hidden = false;
   previewEmpty.hidden = true;
-
-  for (const button of pageNav.querySelectorAll("button")) {
-    button.classList.toggle("is-active", button.textContent === String(page));
-  }
 }
 
 function formatFetchError(error, fallback) {

@@ -38,7 +38,7 @@ body {
   min-width: 0;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 42px;
 }
 
@@ -75,7 +75,7 @@ form {
   padding: 32px;
   place-items: center;
   border: 1px dashed #8b8579;
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--paper);
   color: var(--ink);
   cursor: pointer;
@@ -107,7 +107,7 @@ form {
   justify-content: center;
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 .options legend {
@@ -131,7 +131,7 @@ form {
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--accent);
   color: white;
   font-size: 15px;
@@ -185,7 +185,7 @@ form {
   min-height: 650px;
   padding: 24px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--panel);
 }
 
@@ -204,41 +204,33 @@ form {
   overflow-wrap: anywhere;
 }
 
-.page-nav {
-  display: flex;
-  gap: 6px;
-  padding: 4px 2px 10px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.page-nav-button {
-  flex: 0 0 auto;
-  min-width: 34px;
-  height: 34px;
+.page-indicator {
+  justify-self: center;
+  min-width: 62px;
+  padding: 7px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 0;
   background: #ffffff;
   color: var(--ink);
   font-size: 14px;
   font-weight: 700;
-  cursor: pointer;
-}
-
-.page-nav-button:hover,
-.page-nav-button.is-active {
-  border-color: #000000;
-  background: #000000;
-  color: #ffffff;
+  line-height: 1;
+  text-align: center;
 }
 
 .preview-frame {
   display: grid;
   min-height: 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--paper);
+  cursor: ew-resize;
   overflow: hidden;
+}
+
+.preview-frame:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 2px;
 }
 
 .preview-frame > * {
