@@ -5,15 +5,35 @@ const fileName = document.querySelector("[data-file-name]");
 const submitButton = document.querySelector("[data-submit]");
 const statusBox = document.querySelector("[data-status]");
 const resultBox = document.querySelector("[data-result]");
+const previewFrame = document.querySelector("[data-preview]");
+const previewEmpty = document.querySelector("[data-preview-empty]");
+const previewName = document.querySelector("[data-preview-name]");
+
+let previewUrl = null;
 
 function setFile(file) {
   if (!file) return;
+  if (file.type && file.type !== "application/pdf") {
+    statusBox.textContent = "PDF 파일만 선택할 수 있습니다.";
+    return;
+  }
+
   const transfer = new DataTransfer();
   transfer.items.add(file);
   fileInput.files = transfer.files;
   fileName.textContent = file.name;
+  previewName.textContent = file.name;
   resultBox.hidden = true;
   statusBox.textContent = "";
+
+  if (previewUrl) {
+    URL.revokeObjectURL(previewUrl);
+  }
+
+  previewUrl = URL.createObjectURL(file);
+  previewFrame.src = previewUrl;
+  previewFrame.hidden = false;
+  previewEmpty.hidden = true;
 }
 
 dropZone.addEventListener("click", () => fileInput.click());
@@ -75,4 +95,3 @@ form.addEventListener("submit", async (event) => {
     submitButton.disabled = false;
   }
 });
-

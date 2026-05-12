@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Booklet Maker</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
     <main class="app-shell">
@@ -40,18 +40,17 @@
         <section class="result" data-result hidden></section>
       </section>
 
-      <aside class="preview-panel" aria-label="중철 인쇄 순서 예시">
-        <div class="sheet">
-          <div>32</div>
-          <div>1</div>
+      <aside class="preview-panel" aria-label="PDF 미리보기">
+        <div class="preview-header">
+          <h2>PDF 미리보기</h2>
+          <p data-preview-name>선택된 PDF가 없습니다.</p>
         </div>
-        <div class="sheet secondary">
-          <div>2</div>
-          <div>31</div>
+        <div class="preview-frame">
+          <div class="preview-empty" data-preview-empty>PDF를 선택하면 여기에 표시됩니다.</div>
+          <iframe data-preview title="선택한 PDF 미리보기" hidden></iframe>
         </div>
       </aside>
     </main>
-    <script src="/static/app.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>
-

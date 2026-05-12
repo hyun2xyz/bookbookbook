@@ -40,6 +40,12 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
             self._send_file(STATIC_DIR / "index.html", "text/html; charset=utf-8")
             return
 
+        if self.path in ("/styles.css", "/app.js"):
+            path = STATIC_DIR / self.path.removeprefix("/")
+            content_type = "text/css; charset=utf-8" if path.suffix == ".css" else "application/javascript; charset=utf-8"
+            self._send_file(path, content_type)
+            return
+
         if self.path.startswith("/static/"):
             relative = self.path.removeprefix("/static/")
             path = STATIC_DIR / relative
