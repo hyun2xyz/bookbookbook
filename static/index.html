@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Booklet Maker</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="tool-panel">
+        <div class="title-row">
+          <h1>Booklet Maker</h1>
+          <p>스프레드 PDF를 중철 출력용 PDF로 변환</p>
+        </div>
+
+        <form data-form>
+          <button class="drop-zone" type="button" data-drop-zone>
+            <span class="drop-title">PDF 드롭 또는 선택</span>
+            <span class="drop-file" data-file-name>아직 선택된 파일이 없습니다.</span>
+          </button>
+          <input data-file type="file" name="pdf" accept="application/pdf,.pdf" hidden>
+
+          <fieldset class="options">
+            <legend>제본 방향</legend>
+            <label>
+              <input type="radio" name="binding" value="left" checked>
+              좌철
+            </label>
+            <label>
+              <input type="radio" name="binding" value="right">
+              우철
+            </label>
+          </fieldset>
+
+          <button class="primary" type="submit" data-submit>중철 PDF 만들기</button>
+        </form>
+
+        <p class="status" data-status></p>
+        <section class="result" data-result hidden></section>
+      </section>
+
+      <aside class="preview-panel" aria-label="중철 인쇄 순서 예시">
+        <div class="sheet">
+          <div>32</div>
+          <div>1</div>
+        </div>
+        <div class="sheet secondary">
+          <div>2</div>
+          <div>31</div>
+        </div>
+      </aside>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+
