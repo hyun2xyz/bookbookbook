@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import errno
 from io import BytesIO
 import json
 import re
 import subprocess
+import sys
 import uuid
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -284,9 +286,23 @@ def _safe_filename(filename: str) -> str:
 
 
 def main() -> None:
-    server = ThreadingHTTPServer((HOST, PORT), BookletRequestHandler)
+    try:
+        server = ThreadingHTTPServer((HOST, PORT), BookletRequestHandler)
+    except OSError as exc:
+        if exc.errno == errno.EADDRINUSE:
+            print(
+                f"Port {PORT} is already in use. Stop the existing Bookbook server, then run ./run_app.sh again.",
+                file=sys.stderr,
+            )
+            raise SystemExit(1) from exc
+        raise
     print(f"Booklet Maker running at http://{HOST}:{PORT}")
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nBookbook stopped.")
+    finally:
+        server.server_close()
 
 
 if __name__ == "__main__":
