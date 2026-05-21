@@ -1,10 +1,10 @@
 ![Bookbookbook](assets/bookbookbook.png)
 
-# Bookbookbook
+Bookbookbook(북북북 쓰다듬기)
 
-Bookbookbook은 InDesign에서 **스프레드 PDF**로 뽑은 파일을 **중철 출력용 PDF**로 바꿔주는 로컬 도구입니다. 브라우저에서 열리지만 변환은 내 컴퓨터 안에서만 실행됩니다. PDF가 외부 서버로 업로드되지 않습니다.
+Bookbookbook은 **페이지 PDF**로 뽑은 파일을 **중철 출력용 PDF**로 바꿔주는 로컬 도구입니다. 브라우저에서 열리지만 변환은 내 컴퓨터 안에서만 실행됩니다. PDF가 외부 서버로 업로드되지 않습니다.
 
-## 필요한 것
+## 필요한 것 !
 
 macOS 기준으로 아래 도구가 필요합니다. 처음 한 번만 설치하면 됩니다.
 
