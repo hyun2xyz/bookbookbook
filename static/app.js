@@ -169,7 +169,7 @@ function showPreviewPage(page) {
 
 function formatFetchError(error, fallback) {
   if (error instanceof TypeError && error.message === "Failed to fetch") {
-    return "로컬 서버 연결에 실패했습니다. http://127.0.0.1:8765 주소로 열었는지 확인해주세요.";
+    return "로컬 서버 연결에 실패했습니다. Terminal에서 cd bookbookbook && ./run_app.sh를 먼저 실행해주세요.";
   }
 
   return error.message || fallback;

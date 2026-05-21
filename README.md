@@ -78,6 +78,23 @@ http://127.0.0.1:8765
 
 `.venv` 폴더를 지웠거나 새 컴퓨터에서 다시 여는 경우에는 처음 설치 과정을 다시 진행하세요.
 
+## GitHub Pages 링크로 쓰기
+
+Bookbookbook은 GitHub Pages 링크에서도 화면을 열 수 있습니다.
+
+```text
+https://hyun2xyz.github.io/bookbookbook/
+```
+
+다만 Pages 링크는 브라우저 화면만 제공합니다. PDF 변환은 각자 자기 컴퓨터에서 실행 중인 로컬 서버가 처리합니다. 그래서 처음 한 번은 위의 설치 과정을 끝내고, 사용할 때마다 Terminal에서 아래 명령을 먼저 실행해야 합니다.
+
+```bash
+cd bookbookbook
+./run_app.sh
+```
+
+그 다음에는 `https://hyun2xyz.github.io/bookbookbook/`를 열어도 되고, `http://127.0.0.1:8765`를 열어도 됩니다. 두 경우 모두 PDF는 자기 컴퓨터 안에서 처리됩니다.
+
 ## 파일이 저장되는 위치
 
 Bookbookbook은 작업 파일을 이 프로젝트 폴더 안에 저장합니다.
