@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bookbookbook</title>
-    <link rel="stylesheet" href="./styles.css">
+    <script type="module" crossorigin src="./assets/index-CRZUpbTf.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BBGj4rkI.css">
   </head>
   <body>
     <main class="app-shell">
@@ -48,10 +49,9 @@
         <div class="page-indicator" data-page-indicator hidden>1/1</div>
         <div class="preview-frame" data-preview-frame tabindex="0" aria-label="PDF 페이지 미리보기. 왼쪽을 누르면 이전 페이지, 오른쪽을 누르면 다음 페이지로 이동합니다.">
           <div class="preview-empty" data-preview-empty>PDF를 선택하면 여기에 표시됩니다.</div>
-          <img data-preview-image alt="선택한 PDF 페이지 미리보기" hidden>
+          <canvas data-preview-canvas aria-label="선택한 PDF 페이지 미리보기" hidden></canvas>
         </div>
       </aside>
     </main>
-    <script src="./app.js"></script>
   </body>
 </html>
