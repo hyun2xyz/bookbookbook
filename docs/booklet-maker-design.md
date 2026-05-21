@@ -1,8 +1,8 @@
-# Booklet Maker Design
+# Bookbookbook Design
 
 ## Goal
 
-Build a local PDF tool that converts a reader-spread PDF exported from InDesign into a saddle-stitch printer-spread PDF.
+Build Bookbookbook as a local PDF tool that converts a reader-spread PDF exported from InDesign into a saddle-stitch printer-spread PDF.
 
 The first supported input shape is:
 
@@ -49,4 +49,3 @@ The app starts on the actual tool screen:
 - No cloud upload.
 - No creep compensation in the first version.
 - No printer marks in the first version.
-

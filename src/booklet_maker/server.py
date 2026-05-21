@@ -27,7 +27,7 @@ PORT = 8765
 
 
 class BookletRequestHandler(BaseHTTPRequestHandler):
-    server_version = "BookletMaker/0.1"
+    server_version = "Bookbookbook/0.1"
 
     def do_OPTIONS(self) -> None:
         self.send_response(HTTPStatus.NO_CONTENT)
@@ -291,16 +291,16 @@ def main() -> None:
     except OSError as exc:
         if exc.errno == errno.EADDRINUSE:
             print(
-                f"Port {PORT} is already in use. Stop the existing Bookbook server, then run ./run_app.sh again.",
+                f"Port {PORT} is already in use. Stop the existing Bookbookbook server, then run ./run_app.sh again.",
                 file=sys.stderr,
             )
             raise SystemExit(1) from exc
         raise
-    print(f"Booklet Maker running at http://{HOST}:{PORT}")
+    print(f"Bookbookbook running at http://{HOST}:{PORT}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nBookbook stopped.")
+        print("\nBookbookbook stopped.")
     finally:
         server.server_close()
 

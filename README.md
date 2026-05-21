@@ -1,6 +1,8 @@
-# Bookbook
+![Bookbookbook](assets/bookbookbook.png)
 
-Bookbook은 InDesign에서 **스프레드 PDF**로 뽑은 파일을 **중철 출력용 PDF**로 바꿔주는 로컬 도구입니다. 브라우저에서 열리지만 변환은 내 컴퓨터 안에서만 실행됩니다. PDF가 외부 서버로 업로드되지 않습니다.
+# Bookbookbook
+
+Bookbookbook은 InDesign에서 **스프레드 PDF**로 뽑은 파일을 **중철 출력용 PDF**로 바꿔주는 로컬 도구입니다. 브라우저에서 열리지만 변환은 내 컴퓨터 안에서만 실행됩니다. PDF가 외부 서버로 업로드되지 않습니다.
 
 ## 필요한 것
 
@@ -11,7 +13,7 @@ macOS 기준으로 아래 도구가 필요합니다. 처음 한 번만 설치하
 - **Python 3.10 이상**: 로컬 서버를 실행하는 도구
 - **Poppler**: PDF 페이지 미리보기에 필요한 `pdftoppm` 명령을 제공하는 도구
 
-Bookbook은 **npm, Node.js, JavaScript 빌드 과정이 필요 없습니다.**
+Bookbookbook은 **npm, Node.js, JavaScript 빌드 과정이 필요 없습니다.**
 
 ## 처음 설치하기
 
@@ -27,11 +29,11 @@ Bookbook은 **npm, Node.js, JavaScript 빌드 과정이 필요 없습니다.**
    brew install git python poppler
    ```
 
-3. Bookbook을 내려받습니다.
+3. Bookbookbook을 내려받습니다.
 
    ```bash
-   git clone https://github.com/hyun2xyz/bookbook.git
-   cd bookbook
+   git clone https://github.com/hyun2xyz/bookbookbook.git
+   cd bookbookbook
    ```
 
    Git을 쓰지 않는다면 GitHub의 **Code > Download ZIP**으로 받아도 됩니다. 압축을 푼 뒤 Terminal에서 그 폴더로 이동하세요.
@@ -45,7 +47,7 @@ Bookbook은 **npm, Node.js, JavaScript 빌드 과정이 필요 없습니다.**
    python -m pip install -r requirements.txt
    ```
 
-5. Bookbook을 실행합니다.
+5. Bookbookbook을 실행합니다.
 
    ```bash
    ./run_app.sh
@@ -64,7 +66,7 @@ Bookbook은 **npm, Node.js, JavaScript 빌드 과정이 필요 없습니다.**
 처음 설치를 끝낸 뒤에는 보통 아래 두 줄만 실행하면 됩니다.
 
 ```bash
-cd bookbook
+cd bookbookbook
 ./run_app.sh
 ```
 
@@ -78,7 +80,7 @@ http://127.0.0.1:8765
 
 ## 파일이 저장되는 위치
 
-Bookbook은 작업 파일을 이 프로젝트 폴더 안에 저장합니다.
+Bookbookbook은 작업 파일을 이 프로젝트 폴더 안에 저장합니다.
 
 - 업로드한 PDF: `work/uploads/`
 - 미리보기 파일: `work/previews/`
@@ -94,7 +96,7 @@ Bookbook은 작업 파일을 이 프로젝트 폴더 안에 저장합니다.
 - 중간 페이지: 두 쪽이 붙어 있는 스프레드 페이지
 - 마지막 쪽: 뒤표지 단면 페이지
 
-Bookbook은 스프레드를 낱장 페이지로 나누고, 전체 쪽수가 4의 배수가 되도록 뒤표지 앞에 빈 페이지를 추가한 뒤, 중철 인쇄용 스프레드 PDF를 만듭니다.
+Bookbookbook은 스프레드를 낱장 페이지로 나누고, 전체 쪽수가 4의 배수가 되도록 뒤표지 앞에 빈 페이지를 추가한 뒤, 중철 인쇄용 스프레드 PDF를 만듭니다.
 
 ## 문제가 생겼을 때
 
@@ -124,14 +126,14 @@ PDF 변환 자체는 가능할 수 있지만, 페이지 미리보기 이미지�
 Terminal에서 로컬 서버가 실행 중인지 확인하세요. 정상 실행 중이면 아래 문구가 보입니다.
 
 ```text
-Booklet Maker running at http://127.0.0.1:8765
+Bookbookbook running at http://127.0.0.1:8765
 ```
 
 그 다음 브라우저에서 `http://127.0.0.1:8765`를 엽니다.
 
 ### `Port 8765 is already in use`라고 나올 때
 
-이미 Bookbook이 켜져 있거나 다른 로컬 앱이 같은 포트를 쓰고 있는 상태입니다. 기존 Bookbook Terminal 창에서 `Control+C`를 누른 뒤 `./run_app.sh`를 다시 실행하세요.
+이미 Bookbookbook이 켜져 있거나 다른 로컬 앱이 같은 포트를 쓰고 있는 상태입니다. 기존 Bookbookbook Terminal 창에서 `Control+C`를 누른 뒤 `./run_app.sh`를 다시 실행하세요.
 
 ## 테스트 실행
 
