@@ -11,7 +11,11 @@ const previewImage = document.querySelector("[data-preview-image]");
 const pageIndicator = document.querySelector("[data-page-indicator]");
 const previewFrame = document.querySelector("[data-preview-frame]");
 
-const API_BASE = window.location.protocol === "file:" ? "http://127.0.0.1:8765" : "";
+const LOCAL_API_BASE = "http://127.0.0.1:8765";
+const API_BASE =
+  window.location.protocol === "file:" || window.location.hostname.endsWith("github.io")
+    ? LOCAL_API_BASE
+    : "";
 let previewRequestId = 0;
 let previewState = null;
 
