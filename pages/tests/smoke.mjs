@@ -8,11 +8,14 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
-const fixturePath = resolve(__dirname, "reader-spreads-fixture.pdf");
-const outputPath = resolve(__dirname, "smoke-output.pdf");
+const readerFixturePath = resolve(__dirname, "reader-spreads-fixture.pdf");
+const readerOutputPath = resolve(__dirname, "smoke-output-reader-spreads.pdf");
+const allSpreadFixturePath = resolve(__dirname, "all-spreads-fixture.pdf");
+const allSpreadOutputPath = resolve(__dirname, "smoke-output-all-spreads.pdf");
 const port = 4173;
 
-await createFixturePdf(fixturePath);
+await createReaderSpreadFixturePdf(readerFixturePath);
+await createAllSpreadFixturePdf(allSpreadFixturePath);
 
 const server = spawn("npx", ["vite", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
   cwd: root,
@@ -26,40 +29,39 @@ try {
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await page.goto(`http://127.0.0.1:${port}/`);
-    await page.setInputFiles("input[type=file]", fixturePath);
-    await page.getByRole("button", { name: "중철 PDF 만들기" }).click();
-    await page.getByText("변환이 끝났습니다.").waitFor({ timeout: 10_000 });
-
-    const summary = await page.locator("[data-result]").innerText();
-    assertIncludes(summary, "원본 PDF 페이지");
-    assertIncludes(summary, "4");
-    assertIncludes(summary, "추가된 빈 페이지");
-    assertIncludes(summary, "2");
-
-    const [download] = await Promise.all([
-      page.waitForEvent("download"),
-      page.getByRole("link", { name: "PDF 다운로드" }).click(),
-    ]);
-    await download.saveAs(outputPath);
+    await convertFixture(page, {
+      fixturePath: readerFixturePath,
+      outputPath: readerOutputPath,
+      expectedSummary: {
+        "원본 PDF 페이지": 4,
+        "분리 후 책 쪽수": 6,
+        "추가된 빈 페이지": 2,
+        "출력 인쇄면": 4,
+      },
+    });
+    await convertFixture(page, {
+      fixturePath: allSpreadFixturePath,
+      outputPath: allSpreadOutputPath,
+      expectedSummary: {
+        "원본 PDF 페이지": 2,
+        "분리 후 책 쪽수": 4,
+        "추가된 빈 페이지": 0,
+        "출력 인쇄면": 2,
+      },
+    });
   } finally {
     await browser.close();
   }
 
-  const output = await PDFDocument.load(await import("node:fs/promises").then((fs) => fs.readFile(outputPath)));
-  const firstPage = output.getPage(0);
-  if (output.getPageCount() !== 4) {
-    throw new Error(`Expected 4 output pages, received ${output.getPageCount()}`);
-  }
-  if (Math.round(firstPage.getWidth()) !== 840 || Math.round(firstPage.getHeight()) !== 595) {
-    throw new Error(`Unexpected output page size ${firstPage.getWidth()} x ${firstPage.getHeight()}`);
-  }
+  await assertOutputPdf(readerOutputPath, 4, 840, 595);
+  await assertOutputPdf(allSpreadOutputPath, 2, 840, 595);
 
-  console.log("Smoke test passed: browser converted and downloaded a valid booklet PDF.");
+  console.log("Smoke test passed: browser converted mixed and all-spread PDFs into valid booklet PDFs.");
 } finally {
   server.kill("SIGTERM");
 }
 
-async function createFixturePdf(path) {
+async function createReaderSpreadFixturePdf(path) {
   await mkdir(dirname(path), { recursive: true });
   const source = await PDFDocument.create();
   const font = await source.embedFont(StandardFonts.Helvetica);
@@ -73,6 +75,48 @@ async function createFixturePdf(path) {
     page.drawText(`page ${index + 1}`, { x: 24, y: height - 48, size: 14, font });
   });
   await writeFile(path, await source.save());
+}
+
+async function createAllSpreadFixturePdf(path) {
+  await mkdir(dirname(path), { recursive: true });
+  const source = await PDFDocument.create();
+  const font = await source.embedFont(StandardFonts.Helvetica);
+  [
+    [840, 595],
+    [840, 595],
+  ].forEach(([width, height], index) => {
+    const page = source.addPage([width, height]);
+    page.drawText(`spread ${index + 1}`, { x: 24, y: height - 48, size: 14, font });
+  });
+  await writeFile(path, await source.save());
+}
+
+async function convertFixture(page, { fixturePath, outputPath, expectedSummary }) {
+  await page.setInputFiles("input[type=file]", fixturePath);
+  await page.getByRole("button", { name: "중철 PDF 만들기" }).click();
+  await page.getByText("변환이 끝났습니다.").waitFor({ timeout: 10_000 });
+
+  const summary = normalizeText(await page.locator("[data-result]").innerText());
+  Object.entries(expectedSummary).forEach(([label, value]) => {
+    assertIncludes(summary, `${label} ${value}`);
+  });
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "PDF 다운로드" }).click(),
+  ]);
+  await download.saveAs(outputPath);
+}
+
+async function assertOutputPdf(path, expectedPageCount, expectedWidth, expectedHeight) {
+  const output = await PDFDocument.load(await import("node:fs/promises").then((fs) => fs.readFile(path)));
+  const firstPage = output.getPage(0);
+  if (output.getPageCount() !== expectedPageCount) {
+    throw new Error(`Expected ${expectedPageCount} output pages, received ${output.getPageCount()}`);
+  }
+  if (Math.round(firstPage.getWidth()) !== expectedWidth || Math.round(firstPage.getHeight()) !== expectedHeight) {
+    throw new Error(`Unexpected output page size ${firstPage.getWidth()} x ${firstPage.getHeight()}`);
+  }
 }
 
 async function waitForServer(url) {
@@ -104,4 +148,8 @@ function assertIncludes(value, expected) {
   if (!value.includes(expected)) {
     throw new Error(`Expected ${JSON.stringify(value)} to include ${JSON.stringify(expected)}`);
   }
+}
+
+function normalizeText(value) {
+  return value.replace(/\s+/g, " ").trim();
 }

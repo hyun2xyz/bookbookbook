@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPrinterPairs,
   buildReaderSlots,
+  inferSinglePageSize,
   padSlotsForSaddleStitch,
 } from "../src/imposition";
 
@@ -23,6 +24,36 @@ describe("browser imposition rules", () => {
       { sourceIndex: 2, part: "right" },
       { sourceIndex: 3, part: "full" },
     ]);
+  });
+
+  it("splits every page when a PDF contains only reader spreads", () => {
+    const pageSizes = [
+      { width: 840, height: 595 },
+      { width: 840, height: 595 },
+    ];
+
+    expect(buildReaderSlots(pageSizes)).toEqual([
+      { sourceIndex: 0, part: "left" },
+      { sourceIndex: 0, part: "right" },
+      { sourceIndex: 1, part: "left" },
+      { sourceIndex: 1, part: "right" },
+    ]);
+    expect(inferSinglePageSize(pageSizes)).toEqual({ width: 420, height: 595 });
+  });
+
+  it("keeps ordinary one-page-per-sheet PDFs as full logical pages", () => {
+    const pageSizes = [
+      { width: 420, height: 595 },
+      { width: 420, height: 595 },
+      { width: 420, height: 595 },
+    ];
+
+    expect(buildReaderSlots(pageSizes)).toEqual([
+      { sourceIndex: 0, part: "full" },
+      { sourceIndex: 1, part: "full" },
+      { sourceIndex: 2, part: "full" },
+    ]);
+    expect(inferSinglePageSize(pageSizes)).toEqual({ width: 420, height: 595 });
   });
 
   it("pads blanks before the back cover so the final page count is divisible by four", () => {

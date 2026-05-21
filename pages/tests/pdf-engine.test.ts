@@ -18,6 +18,19 @@ async function createReaderSpreadFixture(): Promise<Uint8Array> {
   return source.save();
 }
 
+async function createAllSpreadFixture(): Promise<Uint8Array> {
+  const source = await PDFDocument.create();
+  const font = await source.embedFont(StandardFonts.Helvetica);
+  [
+    [840, 595],
+    [840, 595],
+  ].forEach(([width, height], index) => {
+    const page = source.addPage([width, height]);
+    page.drawText(`spread ${index + 1}`, { x: 24, y: height - 48, size: 14, font });
+  });
+  return source.save();
+}
+
 describe("browser PDF engine", () => {
   it("splits spreads, pads before the back cover, and emits printer-spread PDF bytes", async () => {
     const sourceBytes = await createReaderSpreadFixture();
@@ -46,6 +59,24 @@ describe("browser PDF engine", () => {
 
     const output = await PDFDocument.load(result.bytes);
     expect(result.summary.printerSpreads).toBe(4);
+    expect(output.getPage(0).getWidth()).toBeCloseTo(840);
+    expect(output.getPage(0).getHeight()).toBeCloseTo(595);
+  });
+
+  it("auto-detects PDFs made entirely of two-page reader spreads", async () => {
+    const sourceBytes = await createAllSpreadFixture();
+
+    const result = await convertPdfToBooklet(sourceBytes, { binding: "left" });
+
+    const output = await PDFDocument.load(result.bytes);
+    expect(result.summary).toEqual({
+      originalPdfPages: 2,
+      readerPagesBeforePadding: 4,
+      readerPagesAfterPadding: 4,
+      blankPagesAdded: 0,
+      printerSpreads: 2,
+    });
+    expect(output.getPageCount()).toBe(2);
     expect(output.getPage(0).getWidth()).toBeCloseTo(840);
     expect(output.getPage(0).getHeight()).toBeCloseTo(595);
   });

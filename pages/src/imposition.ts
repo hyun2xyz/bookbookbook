@@ -11,16 +11,28 @@ export interface SourceSlot {
   part: SlotPart;
 }
 
+interface ReaderLayout {
+  singlePage: PageSize;
+  slots: SourceSlot[];
+}
+
+const SPREAD_WIDTH_MULTIPLIER = 1.5;
+const ALL_SPREAD_ASPECT_RATIO = 1.25;
+
 export function buildReaderSlots(pageSizes: PageSize[]): SourceSlot[] {
+  return analyzeReaderLayout(pageSizes).slots;
+}
+
+function analyzeReaderLayout(pageSizes: PageSize[]): ReaderLayout {
   if (pageSizes.length === 0) {
     throw new Error("PDF has no pages");
   }
 
-  const singleWidth = inferSinglePageWidth(pageSizes);
+  const singlePage = inferSinglePageSize(pageSizes);
   const slots: SourceSlot[] = [];
 
   pageSizes.forEach((size, index) => {
-    if (size.width >= singleWidth * 1.5) {
+    if (size.width >= singlePage.width * SPREAD_WIDTH_MULTIPLIER) {
       slots.push({ sourceIndex: index, part: "left" });
       slots.push({ sourceIndex: index, part: "right" });
     } else {
@@ -28,7 +40,7 @@ export function buildReaderSlots(pageSizes: PageSize[]): SourceSlot[] {
     }
   });
 
-  return slots;
+  return { singlePage, slots };
 }
 
 export function padSlotsForSaddleStitch(slots: SourceSlot[]): SourceSlot[] {
@@ -85,15 +97,30 @@ export function inferSinglePageSize(pageSizes: PageSize[]): PageSize {
     throw new Error("PDF has no pages");
   }
 
-  return pageSizes.reduce((smallest, current) => (current.width < smallest.width ? current : smallest));
-}
-
-function inferSinglePageWidth(pageSizes: PageSize[]): number {
   const smallestWidth = Math.min(...pageSizes.map((size) => size.width));
 
   if (smallestWidth <= 0) {
     throw new Error("PDF page width must be greater than zero");
   }
 
-  return smallestWidth;
+  if (shouldTreatUniformPagesAsSpreads(pageSizes)) {
+    const narrowestSpread = pageSizes.reduce((smallest, current) => (current.width < smallest.width ? current : smallest));
+    return { width: narrowestSpread.width / 2, height: narrowestSpread.height };
+  }
+
+  return pageSizes.reduce((smallest, current) => (current.width < smallest.width ? current : smallest));
+}
+
+function shouldTreatUniformPagesAsSpreads(pageSizes: PageSize[]): boolean {
+  const widths = pageSizes.map((size) => size.width);
+  const smallestWidth = Math.min(...widths);
+  const largestWidth = Math.max(...widths);
+  const hasMixedWidths = largestWidth >= smallestWidth * SPREAD_WIDTH_MULTIPLIER;
+
+  if (hasMixedWidths) {
+    return false;
+  }
+
+  // Uniform spread PDFs have no narrow cover page to reveal the single-page width.
+  return pageSizes.every((size) => size.width / size.height >= ALL_SPREAD_ASPECT_RATIO);
 }
