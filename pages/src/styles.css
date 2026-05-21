@@ -43,8 +43,15 @@ body {
 }
 
 .title-row {
-  margin-bottom: 36px;
+  margin-bottom: 32px;
   text-align: center;
+}
+
+.brand-drawing {
+  display: block;
+  width: min(100%, 440px);
+  height: auto;
+  margin: 0 auto 24px;
 }
 
 h1 {
@@ -59,6 +66,15 @@ p {
   color: var(--muted);
   font-size: 15px;
   line-height: 1.5;
+}
+
+.auto-blank-notice {
+  max-width: 440px;
+  margin: 18px auto 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: #555555;
+  font-size: 14px;
 }
 
 form {
