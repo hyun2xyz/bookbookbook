@@ -1,7 +1,12 @@
 __pycache__/
 *.pyc
 .venv/
+**/.venv/
 .pytest_cache/
-work/uploads/
-work/previews/
-output/*.pdf
+**/.pytest_cache/
+local-package/work/uploads/
+local-package/work/previews/
+local-package/output/*.pdf
+pages/node_modules/
+pages/dist/
+pages/tests/*.pdf
