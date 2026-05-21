@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Booklet Maker</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="tool-panel">
+        <div class="title-row">
+          <h1>Booklet Maker</h1>
+          <p>스프레드 PDF를 중철 출력용 PDF로 변환</p>
+        </div>
+
+        <form data-form>
+          <button class="drop-zone" type="button" data-drop-zone>
+            <span class="drop-title">PDF 드롭 또는 선택</span>
+            <span class="drop-file" data-file-name>아직 선택된 파일이 없습니다.</span>
+          </button>
+          <input data-file type="file" name="pdf" accept="application/pdf,.pdf" hidden>
+
+          <fieldset class="options">
+            <legend>제본 방향</legend>
+            <label>
+              <input type="radio" name="binding" value="left" checked>
+              좌철
+            </label>
+            <label>
+              <input type="radio" name="binding" value="right">
+              우철
+            </label>
+          </fieldset>
+
+          <button class="primary" type="submit" data-submit>중철 PDF 만들기</button>
+        </form>
+
+        <p class="status" data-status></p>
+        <section class="result" data-result hidden></section>
+      </section>
+
+      <aside class="preview-panel" aria-label="PDF 미리보기">
+        <div class="preview-header">
+          <h2>PDF 미리보기</h2>
+          <p data-preview-name>선택된 PDF가 없습니다.</p>
+        </div>
+        <div class="page-indicator" data-page-indicator hidden>1/1</div>
+        <div class="preview-frame" data-preview-frame tabindex="0" aria-label="PDF 페이지 미리보기. 왼쪽을 누르면 이전 페이지, 오른쪽을 누르면 다음 페이지로 이동합니다.">
+          <div class="preview-empty" data-preview-empty>PDF를 선택하면 여기에 표시됩니다.</div>
+          <img data-preview-image alt="선택한 PDF 페이지 미리보기" hidden>
+        </div>
+      </aside>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
