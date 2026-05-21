@@ -260,6 +260,7 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
 
     def _send_cors_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Private-Network", "true")
 
 
 def _find_header(header_text: str, header_name: str) -> str:
