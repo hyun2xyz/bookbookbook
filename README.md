@@ -1,6 +1,7 @@
 ![Bookbookbook](assets/bookbookbook.png)
 
-###Bookbookbook(북북북 쓰다듬기)
+Bookbookbook(북북북 쓰다듬기)는 PDF로 뽑은 파일을 중철 출력용 PDF로 바꿔주는 도구입니다.
+
 ```
 안녕하세요, 현입니다.
 
@@ -15,12 +16,7 @@
 ```
 
 
-
-----
-
-Bookbookbook은 **PDF**로 뽑은 파일을 **중철 출력용 PDF**로 바꿔주는 도구입니다. 이제 기본 사용 방식은 GitHub Pages에서 바로 여는 정적 웹앱입니다. PDF는 서버로 업로드되지 않고, 사용자의 브라우저 안에서 처리됩니다.
-
-### 바로 쓰기
+## 사용 하기
 
 아래 링크를 열고 PDF를 선택하면 됩니다.
 
@@ -28,7 +24,7 @@ Bookbookbook은 **PDF**로 뽑은 파일을 **중철 출력용 PDF**로 바꿔�
 https://hyun2xyz.github.io/bookbookbook/
 ```
 
-설치가 필요 없습니다. 인터넷은 처음 페이지를 열 때 필요하고, 열린 뒤 PDF 변환은 브라우저 안에서 진행됩니다.
+설치도 필요 없습니다. 열린 뒤 PDF 변환은 브라우저 안에서 진행됩니다.
 
 ## 지원하는 PDF 형태
 
