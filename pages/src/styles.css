@@ -329,6 +329,13 @@ p {
   text-align: center;
 }
 
+.preview-empty [data-preview-empty-message] {
+  color: #8f8f8f;
+  font-size: 12px;
+  font-weight: var(--font-light);
+  line-height: 1.35;
+}
+
 .preview-frame canvas {
   align-self: center;
   justify-self: center;
