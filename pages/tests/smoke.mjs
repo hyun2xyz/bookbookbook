@@ -107,6 +107,14 @@ async function convertFixture(page, { fixturePath, outputPath, inputMode, expect
   assertIncludes(analysis, "PDF 분석");
   assertIncludes(analysis, "PDF 형태");
 
+  const pageNumber = page.locator("[data-page-number]");
+  await pageNumber.fill("2");
+  await pageNumber.press("Enter");
+  const currentPage = await pageNumber.inputValue();
+  if (currentPage !== "2") {
+    throw new Error(`Expected preview page input to navigate to page 2, received ${currentPage}`);
+  }
+
   const blankPlacementVisible = await page.locator("[data-blank-placement]").isVisible();
   if (expectedSummary["추가된 빈 페이지"] > 0 && !blankPlacementVisible) {
     throw new Error("Expected blank page placement controls to be visible");

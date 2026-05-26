@@ -15,6 +15,8 @@ const previewEmptyMessage = getElement<HTMLElement>("[data-preview-empty-message
 const previewName = getElement<HTMLElement>("[data-preview-name]");
 const previewCanvas = getElement<HTMLCanvasElement>("[data-preview-canvas]");
 const pageIndicator = getElement<HTMLElement>("[data-page-indicator]");
+const pageNumberInput = getElement<HTMLInputElement>("[data-page-number]");
+const pageTotal = getElement<HTMLElement>("[data-page-total]");
 const previewFrame = getElement<HTMLElement>("[data-preview-frame]");
 const analysisBox = getElement<HTMLElement>("[data-analysis]");
 const blankPlacementBox = getElement<HTMLFieldSetElement>("[data-blank-placement]");
@@ -39,6 +41,18 @@ blankPageNumberInput.addEventListener("focus", () => {
   const customPlacement = form.querySelector<HTMLInputElement>('input[name="blankPlacement"][value="before-page"]');
   if (customPlacement) {
     customPlacement.checked = true;
+  }
+});
+
+pageNumberInput.addEventListener("change", () => {
+  void showPreviewPageFromInput();
+});
+
+pageNumberInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    pageNumberInput.blur();
+    void showPreviewPageFromInput();
   }
 });
 
@@ -188,8 +202,10 @@ async function showPreviewPage(page: number): Promise<void> {
   const nextPage = Math.min(Math.max(page, 1), previewState.document.pageCount);
   previewState.currentPage = nextPage;
   previewName.textContent = fileInput.files?.[0]?.name ?? "선택된 PDF";
-  pageIndicator.textContent = `${nextPage}/${previewState.document.pageCount}`;
   pageIndicator.hidden = false;
+  pageNumberInput.max = String(previewState.document.pageCount);
+  pageNumberInput.value = String(nextPage);
+  pageTotal.textContent = String(previewState.document.pageCount);
   previewCanvas.hidden = false;
   previewEmpty.hidden = true;
   previewFrame.classList.remove("is-empty");
@@ -204,7 +220,9 @@ async function resetPreview(): Promise<void> {
 
   previewState = null;
   pageIndicator.hidden = true;
-  pageIndicator.textContent = "1/1";
+  pageNumberInput.value = "1";
+  pageNumberInput.max = "1";
+  pageTotal.textContent = "1";
   previewCanvas.hidden = true;
   previewCanvas.removeAttribute("width");
   previewCanvas.removeAttribute("height");
@@ -212,6 +230,18 @@ async function resetPreview(): Promise<void> {
   previewEmpty.hidden = false;
   previewFrame.classList.add("is-empty");
   previewEmptyMessage.textContent = "드래그 엔 드롭 가능";
+}
+
+async function showPreviewPageFromInput(): Promise<void> {
+  if (!previewState) return;
+
+  const requestedPage = Number(pageNumberInput.value);
+  if (!Number.isFinite(requestedPage)) {
+    pageNumberInput.value = String(previewState.currentPage);
+    return;
+  }
+
+  await showPreviewPage(requestedPage);
 }
 
 function resetResult(): void {
