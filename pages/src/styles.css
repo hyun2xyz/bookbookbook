@@ -403,7 +403,14 @@ p {
 }
 
 .blank-custom {
+  display: inline-flex;
   flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.blank-page-control {
+  gap: 4px;
 }
 
 .blank-page-number {
