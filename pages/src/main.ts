@@ -24,6 +24,8 @@ const blankPlacementNote = getElement<HTMLElement>("[data-blank-placement-note]"
 const blankPageNumberInput = getElement<HTMLInputElement>("[data-blank-page-number]");
 
 let previewRequestId = 0;
+let previewRenderToken = 0;
+let previewRenderQueue: Promise<void> = Promise.resolve();
 let previewState: { document: PreviewDocument; currentPage: number } | null = null;
 let selectedPdfBytes: Uint8Array | null = null;
 let downloadUrl: string | null = null;
@@ -210,10 +212,22 @@ async function showPreviewPage(page: number): Promise<void> {
   previewEmpty.hidden = true;
   previewFrame.classList.remove("is-empty");
 
-  await previewState.document.renderPage(nextPage, previewCanvas, previewFrame);
+  const renderToken = ++previewRenderToken;
+  const previousRender = previewRenderQueue.catch(() => {});
+  const renderJob = previousRender.then(async () => {
+    if (!previewState || renderToken !== previewRenderToken) return;
+
+    await previewState.document.renderPage(nextPage, previewCanvas, previewFrame);
+  });
+
+  previewRenderQueue = renderJob;
+  await renderJob;
 }
 
 async function resetPreview(): Promise<void> {
+  previewRenderToken += 1;
+  await previewRenderQueue.catch(() => {});
+
   if (previewState) {
     await previewState.document.destroy();
   }

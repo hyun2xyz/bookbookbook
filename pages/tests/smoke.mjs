@@ -28,6 +28,15 @@ try {
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    const pageErrors = [];
+    page.on("pageerror", (error) => {
+      pageErrors.push(String(error));
+    });
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        pageErrors.push(message.text());
+      }
+    });
     await page.goto(`http://127.0.0.1:${port}/`);
     const visibleText = normalizeText(await page.locator("body").innerText());
     assertIncludes(visibleText, "PDF 업로드");
@@ -53,6 +62,7 @@ try {
         "출력 인쇄면": 2,
       },
     });
+    assertNoPageErrors(pageErrors);
   } finally {
     await browser.close();
   }
@@ -189,6 +199,12 @@ async function launchBrowser() {
 function assertIncludes(value, expected) {
   if (!value.includes(expected)) {
     throw new Error(`Expected ${JSON.stringify(value)} to include ${JSON.stringify(expected)}`);
+  }
+}
+
+function assertNoPageErrors(errors) {
+  if (errors.length > 0) {
+    throw new Error(`Unexpected browser error: ${errors.join("\n")}`);
   }
 }
 
