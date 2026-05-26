@@ -284,11 +284,17 @@ p {
   margin: 0;
 }
 
+.file-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
 .page-indicator {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  justify-self: start;
   min-width: 70px;
   padding: 7px 12px;
   border: 1px solid var(--line);
@@ -390,7 +396,7 @@ p {
 }
 
 .analysis-panel {
-  padding-top: 14px;
+  padding-top: 12px;
 }
 
 .analysis-panel h3,

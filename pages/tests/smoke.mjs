@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,7 +13,7 @@ const readerFixturePath = resolve(__dirname, "reader-spreads-fixture.pdf");
 const readerOutputPath = resolve(__dirname, "smoke-output-reader-spreads.pdf");
 const allSpreadFixturePath = resolve(__dirname, "all-spreads-fixture.pdf");
 const allSpreadOutputPath = resolve(__dirname, "smoke-output-all-spreads.pdf");
-const port = 4173;
+const port = await getAvailablePort();
 
 await createReaderSpreadFixturePdf(readerFixturePath);
 await createAllSpreadFixturePdf(allSpreadFixturePath);
@@ -113,8 +114,9 @@ async function convertFixture(page, { fixturePath, outputPath, inputMode, expect
   }
   await page.locator("[data-analysis]").waitFor({ timeout: 10_000 });
 
-  const analysis = normalizeText(await page.locator("[data-analysis]").innerText());
-  assertIncludes(analysis, "PDF 분석");
+  const analysisPanel = page.locator("[data-analysis]");
+  const analysis = normalizeText(await analysisPanel.innerText());
+  assertExcludes(analysis, "PDF 분석");
   assertIncludes(analysis, "PDF 형태");
 
   const pageNumber = page.locator("[data-page-number]");
@@ -124,6 +126,8 @@ async function convertFixture(page, { fixturePath, outputPath, inputMode, expect
   if (currentPage !== "2") {
     throw new Error(`Expected preview page input to navigate to page 2, received ${currentPage}`);
   }
+  await assertFileControlsFollowAnalysis(page);
+  await assertPageNumberFollowsFileName(page);
 
   const blankPlacementVisible = await page.locator("[data-blank-placement]").isVisible();
   if (expectedSummary["추가된 빈 페이지"] > 0 && !blankPlacementVisible) {
@@ -185,6 +189,23 @@ async function waitForServer(url) {
   throw new Error(`Timed out waiting for ${url}`);
 }
 
+async function getAvailablePort() {
+  return new Promise((resolvePort, rejectPort) => {
+    const server = createServer();
+    server.on("error", rejectPort);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      server.close(() => {
+        if (address && typeof address === "object") {
+          resolvePort(address.port);
+        } else {
+          rejectPort(new Error("Could not allocate a smoke test port"));
+        }
+      });
+    });
+  });
+}
+
 async function launchBrowser() {
   try {
     return await chromium.launch({ headless: true });
@@ -199,6 +220,30 @@ async function launchBrowser() {
 function assertIncludes(value, expected) {
   if (!value.includes(expected)) {
     throw new Error(`Expected ${JSON.stringify(value)} to include ${JSON.stringify(expected)}`);
+  }
+}
+
+function assertExcludes(value, unexpected) {
+  if (value.includes(unexpected)) {
+    throw new Error(`Expected ${JSON.stringify(value)} not to include ${JSON.stringify(unexpected)}`);
+  }
+}
+
+async function assertFileControlsFollowAnalysis(page) {
+  const analysisBox = await page.locator("[data-analysis]").boundingBox();
+  const controlsBox = await page.locator(".preview-actions").boundingBox();
+
+  if (!analysisBox || !controlsBox || controlsBox.y <= analysisBox.y) {
+    throw new Error("Expected file controls to appear after the analysis table");
+  }
+}
+
+async function assertPageNumberFollowsFileName(page) {
+  const fileNameBox = await page.locator("[data-preview-name]").boundingBox();
+  const pageNumberBox = await page.locator("[data-page-indicator]").boundingBox();
+
+  if (!fileNameBox || !pageNumberBox || pageNumberBox.x <= fileNameBox.x) {
+    throw new Error("Expected page number input to sit to the right of the selected file name");
   }
 }
 

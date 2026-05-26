@@ -268,7 +268,6 @@ function resetResult(): void {
 function renderAnalysis(analysis: BookletAnalysis): void {
   analysisBox.hidden = false;
   analysisBox.innerHTML = `
-    <h3>PDF 분석</h3>
     <div class="analysis-grid">
       <span>PDF 형태</span><strong>${describeDetectedShape(analysis.detectedPdfShape)}</strong>
       <span>원본 PDF 페이지</span><strong>${analysis.originalPdfPages}</strong>
