@@ -95,11 +95,11 @@ a {
 }
 
 .intro-copy {
-  margin-top: 54px;
+  margin-top: 34px;
   color: var(--ink);
   font-family: var(--font-batang);
   font-size: 18px;
-  line-height: 1.72;
+  line-height: 1.82;
   word-break: keep-all;
   overflow-wrap: normal;
   hyphens: none;
@@ -486,11 +486,11 @@ p {
   display: inline-flex;
   justify-self: end;
   width: auto;
-  min-width: 300px;
-  min-height: 50px;
+  min-width: 220px;
+  min-height: 46px;
   align-items: center;
   justify-content: center;
-  padding: 12px 34px;
+  padding: 10px 20px;
   border: 1px dashed var(--line);
   border-radius: 0;
   background: transparent;
@@ -601,7 +601,7 @@ p {
   }
 
   .intro-copy {
-    margin-top: 36px;
+    margin-top: 24px;
     font-size: 15px;
   }
 
