@@ -25,7 +25,10 @@ let previewState: { document: PreviewDocument; currentPage: number } | null = nu
 let selectedPdfBytes: Uint8Array | null = null;
 let downloadUrl: string | null = null;
 
-dropZone.addEventListener("click", () => fileInput.click());
+dropZone.addEventListener("click", (event) => {
+  event.stopPropagation();
+  fileInput.click();
+});
 
 fileInput.addEventListener("change", () => {
   void setFile(fileInput.files?.[0] ?? null);
@@ -90,7 +93,10 @@ form.addEventListener("submit", async (event) => {
 });
 
 previewFrame.addEventListener("click", (event) => {
-  if (!previewState) return;
+  if (!previewState) {
+    fileInput.click();
+    return;
+  }
 
   const bounds = previewFrame.getBoundingClientRect();
   const clickX = event.clientX - bounds.left;
@@ -98,7 +104,13 @@ previewFrame.addEventListener("click", (event) => {
 });
 
 previewFrame.addEventListener("keydown", (event) => {
-  if (!previewState) return;
+  if (!previewState) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      fileInput.click();
+    }
+    return;
+  }
 
   if (event.key === "ArrowLeft") {
     event.preventDefault();
@@ -172,6 +184,7 @@ async function showPreviewPage(page: number): Promise<void> {
   pageIndicator.hidden = false;
   previewCanvas.hidden = false;
   previewEmpty.hidden = true;
+  previewFrame.classList.remove("is-empty");
 
   await previewState.document.renderPage(nextPage, previewCanvas, previewFrame);
 }
@@ -189,6 +202,7 @@ async function resetPreview(): Promise<void> {
   previewCanvas.removeAttribute("height");
   previewCanvas.removeAttribute("style");
   previewEmpty.hidden = false;
+  previewFrame.classList.add("is-empty");
   previewEmptyMessage.textContent = "드래그 엔 드롭 가능";
 }
 

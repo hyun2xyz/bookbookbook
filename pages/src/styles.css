@@ -225,7 +225,8 @@ form {
   font-size: 13px;
 }
 
-.binding-options input[type="radio"] {
+.binding-options input[type="radio"],
+.blank-placement input[type="radio"] {
   appearance: none;
   display: inline-block;
   width: 14px;
@@ -236,12 +237,14 @@ form {
   background: #ffffff;
 }
 
-.binding-options input[type="radio"]:checked {
+.binding-options input[type="radio"]:checked,
+.blank-placement input[type="radio"]:checked {
   border-color: #8abf9c;
   background: radial-gradient(circle, var(--mint) 0 48%, #ffffff 52%);
 }
 
-.binding-options input[type="radio"]:focus-visible {
+.binding-options input[type="radio"]:focus-visible,
+.blank-placement input[type="radio"]:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
@@ -303,6 +306,10 @@ p {
   background: #fff;
   cursor: ew-resize;
   overflow: hidden;
+}
+
+.preview-frame.is-empty {
+  cursor: pointer;
 }
 
 .preview-frame.is-dragging {
