@@ -19,6 +19,7 @@ const previewFrame = getElement<HTMLElement>("[data-preview-frame]");
 const analysisBox = getElement<HTMLElement>("[data-analysis]");
 const blankPlacementBox = getElement<HTMLFieldSetElement>("[data-blank-placement]");
 const blankPlacementNote = getElement<HTMLElement>("[data-blank-placement-note]");
+const blankPageNumberInput = getElement<HTMLInputElement>("[data-blank-page-number]");
 
 let previewRequestId = 0;
 let previewState: { document: PreviewDocument; currentPage: number } | null = null;
@@ -32,6 +33,13 @@ dropZone.addEventListener("click", (event) => {
 
 fileInput.addEventListener("change", () => {
   void setFile(fileInput.files?.[0] ?? null);
+});
+
+blankPageNumberInput.addEventListener("focus", () => {
+  const customPlacement = form.querySelector<HTMLInputElement>('input[name="blankPlacement"][value="before-page"]');
+  if (customPlacement) {
+    customPlacement.checked = true;
+  }
 });
 
 previewFrame.addEventListener("dragover", (event) => {
@@ -65,7 +73,7 @@ form.addEventListener("submit", async (event) => {
     revokeDownloadUrl();
     const formData = new FormData(form);
     const binding = formData.get("binding") === "right" ? "right" : "left";
-    const blankPlacement = parseBlankPlacement(formData.get("blankPlacement"));
+    const blankPlacement = parseBlankPlacement(formData);
     const result = await convertPdfToBooklet(selectedPdfBytes, { binding, blankPlacement });
     const outputBuffer = new ArrayBuffer(result.bytes.byteLength);
     new Uint8Array(outputBuffer).set(result.bytes);
@@ -229,6 +237,8 @@ function renderAnalysis(analysis: BookletAnalysis): void {
   if (analysis.blankPagesAdded > 0) {
     blankPlacementBox.hidden = false;
     blankPlacementNote.textContent = `${analysis.blankPagesAdded}쪽의 빈 페이지가 필요합니다. 어디에 넣을지 고를 수 있습니다.`;
+    blankPageNumberInput.max = String(analysis.readerPagesBeforePadding);
+    blankPageNumberInput.value = String(Math.min(analysis.readerPagesBeforePadding, 2));
   } else {
     blankPlacementBox.hidden = true;
     blankPlacementNote.textContent = "";
@@ -244,6 +254,8 @@ function resetAnalysis(): void {
   if (defaultPlacement) {
     defaultPlacement.checked = true;
   }
+  blankPageNumberInput.removeAttribute("max");
+  blankPageNumberInput.value = "2";
 }
 
 function describeDetectedShape(shape: BookletAnalysis["detectedPdfShape"]): string {
@@ -258,9 +270,19 @@ function describeDetectedShape(shape: BookletAnalysis["detectedPdfShape"]): stri
   return "페이지와 스프레드가 섞인 PDF";
 }
 
-function parseBlankPlacement(value: FormDataEntryValue | null): BlankPlacement {
+function parseBlankPlacement(formData: FormData): BlankPlacement {
+  const value = formData.get("blankPlacement");
   if (value === "after-front-cover" || value === "at-end") {
     return value;
+  }
+
+  if (value === "before-page") {
+    const pageNumber = Number(formData.get("blankPageNumber"));
+    const maxPageNumber = Number(blankPageNumberInput.max || "0");
+    if (!Number.isFinite(pageNumber) || pageNumber < 1 || (maxPageNumber > 0 && pageNumber > maxPageNumber)) {
+      throw new Error("빈 페이지를 넣을 쪽 번호를 확인하세요.");
+    }
+    return { type: "before-page", pageNumber };
   }
 
   return "before-back-cover";

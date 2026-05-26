@@ -391,7 +391,7 @@ p {
 
 .blank-placement {
   display: grid;
-  grid-template-columns: repeat(3, max-content);
+  grid-template-columns: repeat(4, max-content);
   gap: 10px 18px;
   padding: 14px 16px 16px;
 }
@@ -400,6 +400,28 @@ p {
   grid-column: 1 / -1;
   margin: 0;
   font-size: 12px;
+}
+
+.blank-custom {
+  flex-wrap: wrap;
+}
+
+.blank-page-number {
+  width: 48px;
+  height: 24px;
+  margin-left: 2px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: var(--font-light);
+  text-align: center;
+}
+
+.blank-page-number:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 2px;
 }
 
 .download {

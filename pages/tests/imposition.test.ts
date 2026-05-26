@@ -102,6 +102,23 @@ describe("browser imposition rules", () => {
     expect(padded.at(-1)).toEqual({ sourceIndex: 5, part: "full" });
   });
 
+  it("can pad blanks before a custom reader page number", () => {
+    const slots = Array.from({ length: 6 }, (_value, index) => ({
+      sourceIndex: index,
+      part: "full" as const,
+    }));
+
+    const padded = padSlotsForSaddleStitch(slots, { type: "before-page", pageNumber: 4 });
+
+    expect(padded).toHaveLength(8);
+    expect(padded[0]).toEqual({ sourceIndex: 0, part: "full" });
+    expect(padded[1]).toEqual({ sourceIndex: 1, part: "full" });
+    expect(padded[2]).toEqual({ sourceIndex: 2, part: "full" });
+    expect(padded[3]).toEqual({ sourceIndex: null, part: "blank" });
+    expect(padded[4]).toEqual({ sourceIndex: null, part: "blank" });
+    expect(padded[5]).toEqual({ sourceIndex: 3, part: "full" });
+  });
+
   it("can pad blanks at the end when requested", () => {
     const slots = Array.from({ length: 6 }, (_value, index) => ({
       sourceIndex: index,

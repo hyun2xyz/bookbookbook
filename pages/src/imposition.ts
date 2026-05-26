@@ -1,6 +1,7 @@
 export type SlotPart = "full" | "left" | "right" | "blank";
 export type Binding = "left" | "right";
-export type BlankPlacement = "before-back-cover" | "after-front-cover" | "at-end";
+export type PresetBlankPlacement = "before-back-cover" | "after-front-cover" | "at-end";
+export type BlankPlacement = PresetBlankPlacement | { type: "before-page"; pageNumber: number };
 
 export interface PageSize {
   width: number;
@@ -69,6 +70,11 @@ export function padSlotsForSaddleStitch(
 
   if (blankPlacement === "at-end") {
     return [...slots, ...blanks];
+  }
+
+  if (typeof blankPlacement === "object" && blankPlacement.type === "before-page") {
+    const insertIndex = Math.min(Math.max(Math.round(blankPlacement.pageNumber) - 1, 0), slots.length - 1);
+    return [...slots.slice(0, insertIndex), ...blanks, ...slots.slice(insertIndex)];
   }
 
   return [...slots.slice(0, -1), ...blanks, slots[slots.length - 1]];
