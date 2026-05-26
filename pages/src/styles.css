@@ -110,6 +110,10 @@ a {
   margin: 0 0 18px;
 }
 
+.intro-copy p:last-child {
+  margin-bottom: 0;
+}
+
 .intro-link {
   white-space: nowrap;
   text-decoration: none;
@@ -117,15 +121,18 @@ a {
 }
 
 .site-note {
-  margin-top: 54px;
-  font-family: var(--font-mono);
-  font-size: 17px;
-  line-height: 1.55;
+  margin-top: 28px;
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-weight: var(--font-light);
+  line-height: 1.45;
 }
 
 .site-note p {
   margin: 0;
-  color: var(--ink);
+  color: #9b9b9b;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .workspace-panel {
@@ -247,18 +254,20 @@ form {
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: var(--ink);
+  color: var(--blue);
+  font-family: var(--font-main);
+  font-size: 14px;
+  font-weight: var(--font-light);
   text-align: inherit;
   text-decoration-line: underline;
-  text-decoration-color: var(--mint);
-  text-decoration-thickness: 3px;
-  text-underline-offset: 3px;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
   cursor: pointer;
 }
 
 .drop-title {
-  font-size: 14px;
-  font-weight: var(--font-bold);
+  font: inherit;
 }
 
 p {
@@ -314,7 +323,7 @@ p {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 4px;
+  gap: 2px;
   padding: 24px;
   color: var(--muted);
   text-align: center;
@@ -379,7 +388,6 @@ p {
   font-size: 12px;
 }
 
-.primary,
 .download {
   display: inline-flex;
   width: 100%;
@@ -396,9 +404,36 @@ p {
   cursor: pointer;
 }
 
-.primary:hover,
 .download:hover {
   background: #2d2d2d;
+}
+
+.primary {
+  display: inline-flex;
+  justify-self: center;
+  width: auto;
+  min-width: 220px;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 34px;
+  border: 1px dashed var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-main);
+  font-size: 16px;
+  font-weight: var(--font-light);
+  cursor: pointer;
+}
+
+.primary span {
+  box-shadow: inset 0 -0.42em 0 var(--mint);
+}
+
+.primary:hover {
+  border-color: #8d8d8d;
+  background: transparent;
 }
 
 .primary:disabled {
@@ -421,7 +456,7 @@ p {
 }
 
 .usage-guide {
-  margin-top: 54px;
+  margin-top: 24px;
   padding-top: 18px;
 }
 

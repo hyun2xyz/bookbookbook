@@ -36,6 +36,12 @@ export interface ConvertResult {
   summary: ConversionSummary;
 }
 
+interface LogicalPage {
+  page: PDFEmbeddedPage;
+  width: number;
+  height: number;
+}
+
 export async function convertPdfToBooklet(
   inputBytes: Uint8Array | ArrayBuffer,
   options: ConvertOptions,
@@ -50,9 +56,7 @@ export async function convertPdfToBooklet(
   const paddedSlots = padSlotsForSaddleStitch(readerSlots, options.blankPlacement);
   const singlePage = inferSinglePageSize(pageSizes);
   const outputDoc = await PDFDocument.create();
-  const logicalPages = await Promise.all(
-    paddedSlots.map((slot) => embedLogicalPage(outputDoc, sourcePages, slot, singlePage.width, singlePage.height)),
-  );
+  const logicalPages = await Promise.all(paddedSlots.map((slot) => embedLogicalPage(outputDoc, sourcePages, slot)));
   const printerPairs = buildPrinterPairs(logicalPages.length, options.binding);
 
   printerPairs.forEach(([leftNumber, rightNumber]) => {
@@ -60,23 +64,8 @@ export async function convertPdfToBooklet(
     const leftPage = logicalPages[leftNumber - 1];
     const rightPage = logicalPages[rightNumber - 1];
 
-    if (leftPage) {
-      sheet.drawPage(leftPage, {
-        x: 0,
-        y: 0,
-        width: singlePage.width,
-        height: singlePage.height,
-      });
-    }
-
-    if (rightPage) {
-      sheet.drawPage(rightPage, {
-        x: singlePage.width,
-        y: 0,
-        width: singlePage.width,
-        height: singlePage.height,
-      });
-    }
+    drawLogicalPage(sheet, leftPage, 0, 0, singlePage.width, singlePage.height);
+    drawLogicalPage(sheet, rightPage, singlePage.width, 0, singlePage.width, singlePage.height);
   });
 
   return {
@@ -131,9 +120,7 @@ async function embedLogicalPage(
   outputDoc: PDFDocument,
   sourcePages: PDFPage[],
   slot: SourceSlot,
-  singleWidth: number,
-  singleHeight: number,
-): Promise<PDFEmbeddedPage | null> {
+): Promise<LogicalPage | null> {
   if (slot.part === "blank") {
     return null;
   }
@@ -148,27 +135,63 @@ async function embedLogicalPage(
   const halfWidth = sourceWidth / 2;
 
   if (slot.part === "left") {
-    return outputDoc.embedPage(sourcePage, {
-      left: 0,
-      bottom: 0,
-      right: halfWidth,
-      top: sourceHeight,
-    });
+    return {
+      page: await outputDoc.embedPage(sourcePage, {
+        left: 0,
+        bottom: 0,
+        right: halfWidth,
+        top: sourceHeight,
+      }),
+      width: halfWidth,
+      height: sourceHeight,
+    };
   }
 
   if (slot.part === "right") {
-    return outputDoc.embedPage(sourcePage, {
-      left: halfWidth,
+    return {
+      page: await outputDoc.embedPage(sourcePage, {
+        left: halfWidth,
+        bottom: 0,
+        right: sourceWidth,
+        top: sourceHeight,
+      }),
+      width: halfWidth,
+      height: sourceHeight,
+    };
+  }
+
+  return {
+    page: await outputDoc.embedPage(sourcePage, {
+      left: 0,
       bottom: 0,
       right: sourceWidth,
       top: sourceHeight,
-    });
+    }),
+    width: sourceWidth,
+    height: sourceHeight,
+  };
+}
+
+function drawLogicalPage(
+  sheet: PDFPage,
+  logicalPage: LogicalPage | null,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  if (!logicalPage) {
+    return;
   }
 
-  return outputDoc.embedPage(sourcePage, {
-    left: 0,
-    bottom: 0,
-    right: singleWidth,
-    top: singleHeight,
+  const scale = Math.min(width / logicalPage.width, height / logicalPage.height);
+  const drawWidth = logicalPage.width * scale;
+  const drawHeight = logicalPage.height * scale;
+
+  sheet.drawPage(logicalPage.page, {
+    x: x + (width - drawWidth) / 2,
+    y: y + (height - drawHeight) / 2,
+    width: drawWidth,
+    height: drawHeight,
   });
 }

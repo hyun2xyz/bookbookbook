@@ -56,6 +56,23 @@ describe("browser imposition rules", () => {
     expect(inferSinglePageSize(pageSizes)).toEqual({ width: 420, height: 595 });
   });
 
+  it("keeps very wide landscape PDFs as one-page-per-sheet PDFs", () => {
+    const pageSizes = [
+      { width: 1280, height: 720 },
+      { width: 1280, height: 720 },
+      { width: 1280, height: 720 },
+      { width: 1280, height: 720 },
+    ];
+
+    expect(buildReaderSlots(pageSizes)).toEqual([
+      { sourceIndex: 0, part: "full" },
+      { sourceIndex: 1, part: "full" },
+      { sourceIndex: 2, part: "full" },
+      { sourceIndex: 3, part: "full" },
+    ]);
+    expect(inferSinglePageSize(pageSizes)).toEqual({ width: 1280, height: 720 });
+  });
+
   it("pads blanks before the back cover so the final page count is divisible by four", () => {
     const slots = Array.from({ length: 30 }, (_value, index) => ({
       sourceIndex: index,

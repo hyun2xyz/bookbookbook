@@ -18,7 +18,8 @@ export interface ReaderLayout {
 }
 
 const SPREAD_WIDTH_MULTIPLIER = 1.5;
-const ALL_SPREAD_ASPECT_RATIO = 1.25;
+const SPREAD_MIN_ASPECT_RATIO = 1.33;
+const SPREAD_MAX_ASPECT_RATIO = 1.67;
 
 export function buildReaderSlots(pageSizes: PageSize[]): SourceSlot[] {
   return analyzeReaderLayout(pageSizes).slots;
@@ -33,7 +34,7 @@ export function analyzeReaderLayout(pageSizes: PageSize[]): ReaderLayout {
   const slots: SourceSlot[] = [];
 
   pageSizes.forEach((size, index) => {
-    if (size.width >= singlePage.width * SPREAD_WIDTH_MULTIPLIER) {
+    if (size.width >= singlePage.width * SPREAD_WIDTH_MULTIPLIER && isSpreadLikeAspectRatio(size)) {
       slots.push({ sourceIndex: index, part: "left" });
       slots.push({ sourceIndex: index, part: "right" });
     } else {
@@ -134,5 +135,10 @@ function shouldTreatUniformPagesAsSpreads(pageSizes: PageSize[]): boolean {
   }
 
   // Uniform spread PDFs have no narrow cover page to reveal the single-page width.
-  return pageSizes.every((size) => size.width / size.height >= ALL_SPREAD_ASPECT_RATIO);
+  return pageSizes.every(isSpreadLikeAspectRatio);
+}
+
+function isSpreadLikeAspectRatio(size: PageSize): boolean {
+  const aspectRatio = size.width / size.height;
+  return aspectRatio >= SPREAD_MIN_ASPECT_RATIO && aspectRatio <= SPREAD_MAX_ASPECT_RATIO;
 }
