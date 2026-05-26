@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 
-import { convertPdfToBooklet } from "../src/pdf-engine";
+import { analyzePdfForBooklet, convertPdfToBooklet } from "../src/pdf-engine";
 
 async function createReaderSpreadFixture(): Promise<Uint8Array> {
   const source = await PDFDocument.create();
@@ -79,5 +79,21 @@ describe("browser PDF engine", () => {
     expect(output.getPageCount()).toBe(2);
     expect(output.getPage(0).getWidth()).toBeCloseTo(840);
     expect(output.getPage(0).getHeight()).toBeCloseTo(595);
+  });
+
+  it("reports booklet analysis before conversion", async () => {
+    const sourceBytes = await createReaderSpreadFixture();
+
+    const analysis = await analyzePdfForBooklet(sourceBytes);
+
+    expect(analysis).toEqual({
+      originalPdfPages: 4,
+      readerPagesBeforePadding: 6,
+      readerPagesAfterPadding: 8,
+      blankPagesAdded: 2,
+      printerSpreads: 4,
+      detectedPdfShape: "mixed-pages-and-spreads",
+      recommendedBlankPlacement: "before-back-cover",
+    });
   });
 });

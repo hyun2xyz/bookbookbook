@@ -70,6 +70,35 @@ describe("browser imposition rules", () => {
     expect(padded.at(-3)).toEqual({ sourceIndex: null, part: "blank" });
   });
 
+  it("can pad blanks after the front cover when requested", () => {
+    const slots = Array.from({ length: 6 }, (_value, index) => ({
+      sourceIndex: index,
+      part: "full" as const,
+    }));
+
+    const padded = padSlotsForSaddleStitch(slots, "after-front-cover");
+
+    expect(padded).toHaveLength(8);
+    expect(padded[0]).toEqual({ sourceIndex: 0, part: "full" });
+    expect(padded[1]).toEqual({ sourceIndex: null, part: "blank" });
+    expect(padded[2]).toEqual({ sourceIndex: null, part: "blank" });
+    expect(padded.at(-1)).toEqual({ sourceIndex: 5, part: "full" });
+  });
+
+  it("can pad blanks at the end when requested", () => {
+    const slots = Array.from({ length: 6 }, (_value, index) => ({
+      sourceIndex: index,
+      part: "full" as const,
+    }));
+
+    const padded = padSlotsForSaddleStitch(slots, "at-end");
+
+    expect(padded).toHaveLength(8);
+    expect(padded.at(-1)).toEqual({ sourceIndex: null, part: "blank" });
+    expect(padded.at(-2)).toEqual({ sourceIndex: null, part: "blank" });
+    expect(padded.at(-3)).toEqual({ sourceIndex: 5, part: "full" });
+  });
+
   it("builds saddle-stitch printer pairs for left-bound books", () => {
     expect(buildPrinterPairs(16, "left")).toEqual([
       [16, 1],

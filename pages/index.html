@@ -8,49 +8,94 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="tool-panel">
-        <div class="title-row">
-          <img class="brand-drawing" src="./bookbookbook.png" alt="책 위에 book book book 글자와 강아지가 그려진 Bookbookbook 그림">
+      <aside class="intro-panel">
+        <div class="masthead">
+          <div class="brand-mark">
+            <img class="brand-drawing" src="./bookbookbook.png" alt="책 위에 book book book 글자와 강아지가 그려진 Bookbookbook 그림">
+          </div>
         </div>
 
+        <section class="intro-copy" aria-label="Bookbookbook 소개">
+          <p>안녕하세요, <span class="intro-link">북북북(BookBookBook)</span>은 PDF를 중철제본이 소책자 PDF로 만드는 웹 사이트인데요, 제가 인디자인이나 아크로벳 에서 중철 인쇄용 PDF로 변환 하다가 화딱지가 나서 갑작스레 만들었습니다.</p>
+          <p>디자이너라면 다들 겪으시는거죠? 바보통이 와서 저만 이런 게 아니였으면 좋겠습니다.. .</p>
+        </section>
+
+        <section class="site-note" aria-label="사이트 정보">
+          <p>2026년 5월 25일 마지막으로 업데이트 됨.</p>
+        </section>
+
+        <section class="usage-guide" aria-labelledby="usage-guide-title">
+          <h2 id="usage-guide-title">사용설명서</h2>
+          <ol>
+            <li>PDF를 선택합니다.</li>
+            <li>책장이 넘어가는 방향에 맞춰 좌철 또는 우철을 고릅니다.</li>
+            <li>소책자 만들기를 누릅니다.</li>
+            <li>변환이 끝나면 PDF 다운로드를 눌러 저장합니다.</li>
+          </ol>
+          <h3>지원하는 PDF 형태</h3>
+          <p>낱장 페이지 단위 PDF여도, 이미 펼침면(스프레드)으로 만든 PDF여도 괜찮습니다.<br>북북북이 형태를 자동으로 판단해 중철 인쇄 순서로 다시 배치합니다. ദ്ദി ' ᵕ ' )</p>
+          <p>PDF는 서버로 업로드되지 않고, 브라우저 안에서만 처리됩니다.</p>
+        </section>
+        <p class="auto-blank-notice">중철 소책자는 전체 쪽수가 4의 배수여야 해서, 쪽수가 부족하면 뒤표지 앞에 빈 페이지가 자동으로 추가됩니다.</p>
+      </aside>
+
+      <section class="workspace-panel">
         <form data-form>
-          <button class="drop-zone" type="button" data-drop-zone>
-            <span class="drop-title">PDF 드롭 또는 선택</span>
-            <span class="drop-file" data-file-name>아직 선택된 파일이 없습니다.</span>
-          </button>
+          <div class="preview-title">
+            <h2>PDF PREVIEW</h2>
+            <div class="file-controls">
+              <fieldset class="binding-options">
+                <legend class="visually-hidden">제본 방향</legend>
+                <label>
+                  <input type="radio" name="binding" value="left" checked>
+                  좌철
+                </label>
+                <label>
+                  <input type="radio" name="binding" value="right">
+                  우철
+                </label>
+              </fieldset>
+            </div>
+          </div>
+
           <input data-file type="file" name="pdf" accept="application/pdf,.pdf" hidden>
 
-          <fieldset class="options">
-            <legend>제본 방향</legend>
+          <p class="selected-file" data-preview-name>선택된 PDF가 없습니다.</p>
+          <div class="page-indicator" data-page-indicator hidden>1/1</div>
+          <div class="preview-frame" data-preview-frame tabindex="0" aria-label="PDF 페이지 미리보기. 왼쪽을 누르면 이전 페이지, 오른쪽을 누르면 다음 페이지로 이동합니다.">
+            <div class="preview-empty" data-preview-empty>
+              <button class="drop-zone" type="button" data-drop-zone>
+                <span class="drop-title">PDF 업로드</span>
+              </button>
+              <span data-preview-empty-message>드래그 엔 드롭 가능</span>
+            </div>
+            <canvas data-preview-canvas aria-label="선택한 PDF 페이지 미리보기" hidden></canvas>
+          </div>
+
+          <section class="analysis-panel" data-analysis hidden></section>
+
+          <fieldset class="blank-placement" data-blank-placement hidden>
+            <legend>빈 페이지 위치</legend>
+            <p data-blank-placement-note></p>
             <label>
-              <input type="radio" name="binding" value="left" checked>
-              좌철
+              <input type="radio" name="blankPlacement" value="before-back-cover" checked>
+              뒤표지 앞
             </label>
             <label>
-              <input type="radio" name="binding" value="right">
-              우철
+              <input type="radio" name="blankPlacement" value="after-front-cover">
+              앞표지 뒤
+            </label>
+            <label>
+              <input type="radio" name="blankPlacement" value="at-end">
+              맨 뒤
             </label>
           </fieldset>
 
-          <button class="primary" type="submit" data-submit>중철 PDF 만들기</button>
+          <button class="primary" type="submit" data-submit>소책자 만들기</button>
+          <p class="status" data-status></p>
+          <section class="result" data-result hidden></section>
         </form>
-
-        <p class="status" data-status></p>
-        <section class="result" data-result hidden></section>
-        <p class="auto-blank-notice">중철 소책자는 전체 쪽수가 4의 배수여야 해서, 쪽수가 부족하면 뒤표지 앞에 빈 페이지가 자동으로 추가됩니다.</p>
       </section>
-
-      <aside class="preview-panel" aria-label="PDF 미리보기">
-        <div class="preview-header">
-          <h2>PDF 미리보기</h2>
-          <p data-preview-name>선택된 PDF가 없습니다.</p>
-        </div>
-        <div class="page-indicator" data-page-indicator hidden>1/1</div>
-        <div class="preview-frame" data-preview-frame tabindex="0" aria-label="PDF 페이지 미리보기. 왼쪽을 누르면 이전 페이지, 오른쪽을 누르면 다음 페이지로 이동합니다.">
-          <div class="preview-empty" data-preview-empty>PDF를 선택하면 여기에 표시됩니다.</div>
-          <canvas data-preview-canvas aria-label="선택한 PDF 페이지 미리보기" hidden></canvas>
-        </div>
-      </aside>
     </main>
   </body>
 </html>

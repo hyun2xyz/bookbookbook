@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright";
@@ -29,9 +29,13 @@ try {
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await page.goto(`http://127.0.0.1:${port}/`);
+    const visibleText = normalizeText(await page.locator("body").innerText());
+    assertIncludes(visibleText, "PDF 업로드");
+    assertIncludes(visibleText, "드래그 엔 드롭 가능");
     await convertFixture(page, {
       fixturePath: readerFixturePath,
       outputPath: readerOutputPath,
+      inputMode: "drop",
       expectedSummary: {
         "원본 PDF 페이지": 4,
         "분리 후 책 쪽수": 6,
@@ -91,9 +95,27 @@ async function createAllSpreadFixturePdf(path) {
   await writeFile(path, await source.save());
 }
 
-async function convertFixture(page, { fixturePath, outputPath, expectedSummary }) {
-  await page.setInputFiles("input[type=file]", fixturePath);
-  await page.getByRole("button", { name: "중철 PDF 만들기" }).click();
+async function convertFixture(page, { fixturePath, outputPath, inputMode, expectedSummary }) {
+  if (inputMode === "drop") {
+    await dropFixture(page, fixturePath);
+  } else {
+    await page.setInputFiles("input[type=file]", fixturePath);
+  }
+  await page.locator("[data-analysis]").waitFor({ timeout: 10_000 });
+
+  const analysis = normalizeText(await page.locator("[data-analysis]").innerText());
+  assertIncludes(analysis, "PDF 분석");
+  assertIncludes(analysis, "PDF 형태");
+
+  const blankPlacementVisible = await page.locator("[data-blank-placement]").isVisible();
+  if (expectedSummary["추가된 빈 페이지"] > 0 && !blankPlacementVisible) {
+    throw new Error("Expected blank page placement controls to be visible");
+  }
+  if (expectedSummary["추가된 빈 페이지"] === 0 && blankPlacementVisible) {
+    throw new Error("Expected blank page placement controls to be hidden");
+  }
+
+  await page.getByRole("button", { name: "소책자 만들기" }).click();
   await page.getByText("변환이 끝났습니다.").waitFor({ timeout: 10_000 });
 
   const summary = normalizeText(await page.locator("[data-result]").innerText());
@@ -106,6 +128,18 @@ async function convertFixture(page, { fixturePath, outputPath, expectedSummary }
     page.getByRole("link", { name: "PDF 다운로드" }).click(),
   ]);
   await download.saveAs(outputPath);
+}
+
+async function dropFixture(page, fixturePath) {
+  const bytes = Array.from(await readFile(fixturePath));
+  const fileName = basename(fixturePath);
+  const dataTransfer = await page.evaluateHandle(({ bytes: fileBytes, fileName: name }) => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array(fileBytes)], name, { type: "application/pdf" }));
+    return transfer;
+  }, { bytes, fileName });
+
+  await page.dispatchEvent("[data-preview-frame]", "drop", { dataTransfer });
 }
 
 async function assertOutputPdf(path, expectedPageCount, expectedWidth, expectedHeight) {

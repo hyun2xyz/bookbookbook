@@ -1,7 +1,9 @@
 import { PDFDocument, type PDFEmbeddedPage, type PDFPage } from "pdf-lib";
 
 import {
+  analyzeReaderLayout,
   type Binding,
+  type BlankPlacement,
   type SourceSlot,
   buildPrinterPairs,
   buildReaderSlots,
@@ -17,8 +19,16 @@ export interface ConversionSummary {
   printerSpreads: number;
 }
 
+export type DetectedPdfShape = "single-pages" | "all-spreads" | "mixed-pages-and-spreads";
+
+export interface BookletAnalysis extends ConversionSummary {
+  detectedPdfShape: DetectedPdfShape;
+  recommendedBlankPlacement: BlankPlacement;
+}
+
 export interface ConvertOptions {
   binding: Binding;
+  blankPlacement?: BlankPlacement;
 }
 
 export interface ConvertResult {
@@ -37,7 +47,7 @@ export async function convertPdfToBooklet(
     height: page.getHeight(),
   }));
   const readerSlots = buildReaderSlots(pageSizes);
-  const paddedSlots = padSlotsForSaddleStitch(readerSlots);
+  const paddedSlots = padSlotsForSaddleStitch(readerSlots, options.blankPlacement);
   const singlePage = inferSinglePageSize(pageSizes);
   const outputDoc = await PDFDocument.create();
   const logicalPages = await Promise.all(
@@ -79,6 +89,42 @@ export async function convertPdfToBooklet(
       printerSpreads: printerPairs.length,
     },
   };
+}
+
+export async function analyzePdfForBooklet(inputBytes: Uint8Array | ArrayBuffer): Promise<BookletAnalysis> {
+  const sourceDoc = await PDFDocument.load(inputBytes);
+  const sourcePages = sourceDoc.getPages();
+  const pageSizes = sourcePages.map((page) => ({
+    width: page.getWidth(),
+    height: page.getHeight(),
+  }));
+  const layout = analyzeReaderLayout(pageSizes);
+  const paddedSlots = padSlotsForSaddleStitch(layout.slots);
+
+  return {
+    originalPdfPages: sourcePages.length,
+    readerPagesBeforePadding: layout.slots.length,
+    readerPagesAfterPadding: paddedSlots.length,
+    blankPagesAdded: paddedSlots.length - layout.slots.length,
+    printerSpreads: buildPrinterPairs(paddedSlots.length).length,
+    detectedPdfShape: detectPdfShape(layout.slots),
+    recommendedBlankPlacement: "before-back-cover",
+  };
+}
+
+function detectPdfShape(slots: SourceSlot[]): DetectedPdfShape {
+  const fullSlots = slots.filter((slot) => slot.part === "full").length;
+  const splitSlots = slots.length - fullSlots;
+
+  if (splitSlots === 0) {
+    return "single-pages";
+  }
+
+  if (fullSlots === 0) {
+    return "all-spreads";
+  }
+
+  return "mixed-pages-and-spreads";
 }
 
 async function embedLogicalPage(

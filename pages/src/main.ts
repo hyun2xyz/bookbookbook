@@ -1,20 +1,24 @@
 import "./styles.css";
 
-import { convertPdfToBooklet } from "./pdf-engine";
+import { analyzePdfForBooklet, type BookletAnalysis, convertPdfToBooklet } from "./pdf-engine";
+import type { BlankPlacement } from "./imposition";
 import { type PreviewDocument, loadPreviewDocument } from "./preview";
 
 const form = getElement<HTMLFormElement>("[data-form]");
 const fileInput = getElement<HTMLInputElement>("[data-file]");
 const dropZone = getElement<HTMLButtonElement>("[data-drop-zone]");
-const fileName = getElement<HTMLElement>("[data-file-name]");
 const submitButton = getElement<HTMLButtonElement>("[data-submit]");
 const statusBox = getElement<HTMLElement>("[data-status]");
 const resultBox = getElement<HTMLElement>("[data-result]");
 const previewEmpty = getElement<HTMLElement>("[data-preview-empty]");
+const previewEmptyMessage = getElement<HTMLElement>("[data-preview-empty-message]");
 const previewName = getElement<HTMLElement>("[data-preview-name]");
 const previewCanvas = getElement<HTMLCanvasElement>("[data-preview-canvas]");
 const pageIndicator = getElement<HTMLElement>("[data-page-indicator]");
 const previewFrame = getElement<HTMLElement>("[data-preview-frame]");
+const analysisBox = getElement<HTMLElement>("[data-analysis]");
+const blankPlacementBox = getElement<HTMLFieldSetElement>("[data-blank-placement]");
+const blankPlacementNote = getElement<HTMLElement>("[data-blank-placement-note]");
 
 let previewRequestId = 0;
 let previewState: { document: PreviewDocument; currentPage: number } | null = null;
@@ -23,23 +27,23 @@ let downloadUrl: string | null = null;
 
 dropZone.addEventListener("click", () => fileInput.click());
 
-dropZone.addEventListener("dragover", (event) => {
-  event.preventDefault();
-  dropZone.classList.add("is-dragging");
-});
-
-dropZone.addEventListener("dragleave", () => {
-  dropZone.classList.remove("is-dragging");
-});
-
-dropZone.addEventListener("drop", (event) => {
-  event.preventDefault();
-  dropZone.classList.remove("is-dragging");
-  void setFile(event.dataTransfer?.files[0] ?? null);
-});
-
 fileInput.addEventListener("change", () => {
   void setFile(fileInput.files?.[0] ?? null);
+});
+
+previewFrame.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  previewFrame.classList.add("is-dragging");
+});
+
+previewFrame.addEventListener("dragleave", () => {
+  previewFrame.classList.remove("is-dragging");
+});
+
+previewFrame.addEventListener("drop", (event) => {
+  event.preventDefault();
+  previewFrame.classList.remove("is-dragging");
+  void setFile(event.dataTransfer?.files[0] ?? null);
 });
 
 form.addEventListener("submit", async (event) => {
@@ -58,7 +62,8 @@ form.addEventListener("submit", async (event) => {
     revokeDownloadUrl();
     const formData = new FormData(form);
     const binding = formData.get("binding") === "right" ? "right" : "left";
-    const result = await convertPdfToBooklet(selectedPdfBytes, { binding });
+    const blankPlacement = parseBlankPlacement(formData.get("blankPlacement"));
+    const result = await convertPdfToBooklet(selectedPdfBytes, { binding, blankPlacement });
     const outputBuffer = new ArrayBuffer(result.bytes.byteLength);
     new Uint8Array(outputBuffer).set(result.bytes);
     const blob = new Blob([outputBuffer], { type: "application/pdf" });
@@ -122,20 +127,23 @@ async function setFile(file: File | null): Promise<void> {
 
   const requestId = ++previewRequestId;
   resetResult();
+  resetAnalysis();
   await resetPreview();
 
   const transfer = new DataTransfer();
   transfer.items.add(file);
   fileInput.files = transfer.files;
-  fileName.textContent = file.name;
   previewName.textContent = file.name;
   statusBox.textContent = "브라우저 안에서 미리보기를 준비 중입니다.";
   previewEmpty.hidden = false;
-  previewEmpty.textContent = "PDF를 불러오는 중입니다.";
+  previewEmptyMessage.textContent = "PDF를 불러오는 중입니다.";
 
   try {
     selectedPdfBytes = new Uint8Array(await file.arrayBuffer());
-    const document = await loadPreviewDocument(selectedPdfBytes);
+    const [analysis, document] = await Promise.all([
+      analyzePdfForBooklet(selectedPdfBytes),
+      loadPreviewDocument(selectedPdfBytes),
+    ]);
 
     if (requestId !== previewRequestId) {
       await document.destroy();
@@ -143,12 +151,14 @@ async function setFile(file: File | null): Promise<void> {
     }
 
     previewState = { document, currentPage: 1 };
+    renderAnalysis(analysis);
     await showPreviewPage(1);
     statusBox.textContent = "";
   } catch (error) {
     selectedPdfBytes = null;
-    previewEmpty.textContent = formatError(error, "미리보기를 만들 수 없습니다.");
-    statusBox.textContent = previewEmpty.textContent;
+    resetAnalysis();
+    previewEmptyMessage.textContent = formatError(error, "미리보기를 만들 수 없습니다.");
+    statusBox.textContent = previewEmptyMessage.textContent;
   }
 }
 
@@ -179,7 +189,7 @@ async function resetPreview(): Promise<void> {
   previewCanvas.removeAttribute("height");
   previewCanvas.removeAttribute("style");
   previewEmpty.hidden = false;
-  previewEmpty.textContent = "PDF를 선택하면 여기에 표시됩니다.";
+  previewEmptyMessage.textContent = "드래그 엔 드롭 가능";
 }
 
 function resetResult(): void {
@@ -187,6 +197,59 @@ function resetResult(): void {
   selectedPdfBytes = null;
   resultBox.hidden = true;
   resultBox.innerHTML = "";
+}
+
+function renderAnalysis(analysis: BookletAnalysis): void {
+  analysisBox.hidden = false;
+  analysisBox.innerHTML = `
+    <h3>PDF 분석</h3>
+    <div class="analysis-grid">
+      <span>PDF 형태</span><strong>${describeDetectedShape(analysis.detectedPdfShape)}</strong>
+      <span>원본 PDF 페이지</span><strong>${analysis.originalPdfPages}</strong>
+      <span>분리 후 책 쪽수</span><strong>${analysis.readerPagesBeforePadding}</strong>
+      <span>필요한 빈 페이지</span><strong>${analysis.blankPagesAdded}</strong>
+      <span>출력 인쇄면</span><strong>${analysis.printerSpreads}</strong>
+    </div>
+  `;
+
+  if (analysis.blankPagesAdded > 0) {
+    blankPlacementBox.hidden = false;
+    blankPlacementNote.textContent = `${analysis.blankPagesAdded}쪽의 빈 페이지가 필요합니다. 어디에 넣을지 고를 수 있습니다.`;
+  } else {
+    blankPlacementBox.hidden = true;
+    blankPlacementNote.textContent = "";
+  }
+}
+
+function resetAnalysis(): void {
+  analysisBox.hidden = true;
+  analysisBox.innerHTML = "";
+  blankPlacementBox.hidden = true;
+  blankPlacementNote.textContent = "";
+  const defaultPlacement = form.querySelector<HTMLInputElement>('input[name="blankPlacement"][value="before-back-cover"]');
+  if (defaultPlacement) {
+    defaultPlacement.checked = true;
+  }
+}
+
+function describeDetectedShape(shape: BookletAnalysis["detectedPdfShape"]): string {
+  if (shape === "single-pages") {
+    return "페이지 단위 PDF";
+  }
+
+  if (shape === "all-spreads") {
+    return "스프레드 PDF";
+  }
+
+  return "페이지와 스프레드가 섞인 PDF";
+}
+
+function parseBlankPlacement(value: FormDataEntryValue | null): BlankPlacement {
+  if (value === "after-front-cover" || value === "at-end") {
+    return value;
+  }
+
+  return "before-back-cover";
 }
 
 function revokeDownloadUrl(): void {

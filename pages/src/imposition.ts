@@ -1,5 +1,6 @@
 export type SlotPart = "full" | "left" | "right" | "blank";
 export type Binding = "left" | "right";
+export type BlankPlacement = "before-back-cover" | "after-front-cover" | "at-end";
 
 export interface PageSize {
   width: number;
@@ -11,7 +12,7 @@ export interface SourceSlot {
   part: SlotPart;
 }
 
-interface ReaderLayout {
+export interface ReaderLayout {
   singlePage: PageSize;
   slots: SourceSlot[];
 }
@@ -23,7 +24,7 @@ export function buildReaderSlots(pageSizes: PageSize[]): SourceSlot[] {
   return analyzeReaderLayout(pageSizes).slots;
 }
 
-function analyzeReaderLayout(pageSizes: PageSize[]): ReaderLayout {
+export function analyzeReaderLayout(pageSizes: PageSize[]): ReaderLayout {
   if (pageSizes.length === 0) {
     throw new Error("PDF has no pages");
   }
@@ -43,7 +44,10 @@ function analyzeReaderLayout(pageSizes: PageSize[]): ReaderLayout {
   return { singlePage, slots };
 }
 
-export function padSlotsForSaddleStitch(slots: SourceSlot[]): SourceSlot[] {
+export function padSlotsForSaddleStitch(
+  slots: SourceSlot[],
+  blankPlacement: BlankPlacement = "before-back-cover",
+): SourceSlot[] {
   if (slots.length === 0) {
     throw new Error("Cannot impose an empty document");
   }
@@ -57,6 +61,14 @@ export function padSlotsForSaddleStitch(slots: SourceSlot[]): SourceSlot[] {
     sourceIndex: null,
     part: "blank" as const,
   }));
+
+  if (blankPlacement === "after-front-cover") {
+    return [slots[0], ...blanks, ...slots.slice(1)];
+  }
+
+  if (blankPlacement === "at-end") {
+    return [...slots, ...blanks];
+  }
 
   return [...slots.slice(0, -1), ...blanks, slots[slots.length - 1]];
 }
