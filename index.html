@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bookbookbook</title>
-    <script type="module" crossorigin src="./assets/index-f8080958.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-c1af56f8.css">
+    <script type="module" crossorigin src="./assets/index-b2967873.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-de15cbf3.css">
   </head>
   <body>
     <main class="app-shell">
@@ -44,6 +44,26 @@
         <form data-form>
           <div class="preview-title">
             <h2>PDF PREVIEW</h2>
+          </div>
+
+          <input data-file type="file" name="pdf" accept="application/pdf,.pdf" hidden>
+
+          <label class="page-indicator" data-page-indicator hidden>
+            <input class="page-number-input" data-page-number type="number" min="1" value="1" inputmode="numeric" aria-label="미리보기 쪽 번호">
+            <span>/</span>
+            <span data-page-total>1</span>
+          </label>
+          <div class="preview-frame is-empty" data-preview-frame tabindex="0" aria-label="PDF 페이지 미리보기. 왼쪽을 누르면 이전 페이지, 오른쪽을 누르면 다음 페이지로 이동합니다.">
+            <div class="preview-empty" data-preview-empty>
+              <button class="drop-zone" type="button" data-drop-zone>
+                <span class="drop-title">PDF 업로드</span>
+              </button>
+              <span data-preview-empty-message>드래그 엔 드롭 가능</span>
+            </div>
+            <canvas data-preview-canvas aria-label="선택한 PDF 페이지 미리보기" hidden></canvas>
+          </div>
+
+          <div class="preview-actions">
             <div class="file-controls">
               <fieldset class="binding-options">
                 <legend class="visually-hidden">제본 방향</legend>
@@ -56,21 +76,10 @@
                   우철
                 </label>
               </fieldset>
+              <p class="selected-file" data-preview-name>선택된 PDF가 없습니다.</p>
             </div>
-          </div>
 
-          <input data-file type="file" name="pdf" accept="application/pdf,.pdf" hidden>
-
-          <p class="selected-file" data-preview-name>선택된 PDF가 없습니다.</p>
-          <div class="page-indicator" data-page-indicator hidden>1/1</div>
-          <div class="preview-frame is-empty" data-preview-frame tabindex="0" aria-label="PDF 페이지 미리보기. 왼쪽을 누르면 이전 페이지, 오른쪽을 누르면 다음 페이지로 이동합니다.">
-            <div class="preview-empty" data-preview-empty>
-              <button class="drop-zone" type="button" data-drop-zone>
-                <span class="drop-title">PDF 업로드</span>
-              </button>
-              <span data-preview-empty-message>드래그 엔 드롭 가능</span>
-            </div>
-            <canvas data-preview-canvas aria-label="선택한 PDF 페이지 미리보기" hidden></canvas>
+            <button class="primary" type="submit" data-submit><span>소책자 만들기</span></button>
           </div>
 
           <section class="analysis-panel" data-analysis hidden></section>
@@ -102,7 +111,6 @@
             </div>
           </fieldset>
 
-          <button class="primary" type="submit" data-submit><span>소책자 만들기</span></button>
           <p class="status" data-status></p>
           <section class="result" data-result hidden></section>
         </form>
