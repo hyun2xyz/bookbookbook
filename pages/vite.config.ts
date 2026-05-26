@@ -6,6 +6,11 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     chunkSizeWarningLimit: 2500,
+    rollupOptions: {
+      output: {
+        hashCharacters: "hex",
+      },
+    },
   },
   server: {
     host: "127.0.0.1",
