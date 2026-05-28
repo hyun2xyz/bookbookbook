@@ -135,6 +135,15 @@ a {
   line-height: 1.45;
 }
 
+.site-note a {
+  display: inline-block;
+  margin-top: 5px;
+  color: #9b9b9b;
+  font-size: 12px;
+  line-height: 1.45;
+  text-underline-offset: 2px;
+}
+
 .workspace-panel {
   min-width: 0;
   padding-top: 34px;
