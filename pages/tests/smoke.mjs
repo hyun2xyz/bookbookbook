@@ -42,6 +42,7 @@ try {
     const visibleText = normalizeText(await page.locator("body").innerText());
     assertIncludes(visibleText, "PDF 업로드");
     assertIncludes(visibleText, "드래그 엔 드롭 가능");
+    assertIncludes(visibleText, "PDF를 중철제본이 가능한 소책자 PDF로 만드는");
     await convertFixture(page, {
       fixturePath: readerFixturePath,
       outputPath: readerOutputPath,
