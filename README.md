@@ -52,6 +52,10 @@ pages/
 local-package/
   기존 Python 로컬 서버 버전
   완전 오프라인 작업이나 Python 기반 유지보수가 필요할 때 사용
+
+desktop/
+  Pages 앱을 로컬 macOS 앱으로 감싸는 Electron 패키지
+  DMG 파일을 만들 때 사용
 ```
 
 ## 개발과 검증
@@ -107,3 +111,29 @@ cd local-package
 source .venv/bin/activate
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
+
+## macOS 로컬 앱 DMG 만들기
+
+웹 브라우저 대신 로컬 앱으로 쓰고 싶을 때는 `desktop/` 패키지를 사용합니다. PDF 변환 로직은 `pages/` 앱과 같고, 앱 안에서 로컬 파일로 실행됩니다.
+
+처음 설치:
+
+```bash
+cd desktop
+npm install
+```
+
+DMG 생성:
+
+```bash
+cd desktop
+npm run dist
+```
+
+생성 위치:
+
+```text
+desktop/dist/Bookbookbook-1.0.0.dmg
+```
+
+주의: 현재 DMG는 로컬 배포용 ad-hoc 서명입니다. 인터넷에 공개 배포하려면 Apple Developer ID 서명과 notarization을 추가해야 합니다.

@@ -24,12 +24,20 @@ PREVIEW_DIR = ROOT / "work" / "previews"
 OUTPUT_DIR = ROOT / "output"
 HOST = "127.0.0.1"
 PORT = 8765
+ALLOWED_CORS_ORIGINS = {
+    "https://hyun2xyz.github.io",
+    "http://127.0.0.1:8765",
+    "http://localhost:8765",
+}
 
 
 class BookletRequestHandler(BaseHTTPRequestHandler):
     server_version = "Bookbookbook/0.1"
 
     def do_OPTIONS(self) -> None:
+        if self._reject_disallowed_origin():
+            return
+
         self.send_response(HTTPStatus.NO_CONTENT)
         self._send_cors_headers()
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -37,6 +45,9 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_HEAD(self) -> None:
+        if self._reject_disallowed_origin():
+            return
+
         if self.path == "/":
             path = STATIC_DIR / "index.html"
             if not path.exists():
@@ -52,6 +63,9 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
     def do_GET(self) -> None:
+        if self._reject_disallowed_origin():
+            return
+
         if self.path == "/":
             self._send_file(STATIC_DIR / "index.html", "text/html; charset=utf-8")
             return
@@ -85,6 +99,9 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
     def do_POST(self) -> None:
+        if self._reject_disallowed_origin():
+            return
+
         if self.path == "/convert":
             self._handle_convert()
             return
@@ -261,8 +278,22 @@ class BookletRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def _send_cors_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Private-Network", "true")
+        origin = self.headers.get("Origin")
+        if origin in ALLOWED_CORS_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+            self.send_header("Vary", "Origin")
+
+    def _reject_disallowed_origin(self) -> bool:
+        origin = self.headers.get("Origin")
+        if origin is None or origin in ALLOWED_CORS_ORIGINS:
+            return False
+
+        self.send_response(HTTPStatus.FORBIDDEN)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(b"Origin is not allowed")
+        return True
 
 
 def _find_header(header_text: str, header_name: str) -> str:

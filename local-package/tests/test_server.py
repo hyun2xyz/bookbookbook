@@ -28,8 +28,30 @@ class ServerCorsTests(unittest.TestCase):
 
         with urlopen(request, timeout=5) as response:
             self.assertEqual(response.status, 204)
-            self.assertEqual(response.headers["Access-Control-Allow-Origin"], "*")
+            self.assertEqual(response.headers["Access-Control-Allow-Origin"], "https://hyun2xyz.github.io")
             self.assertEqual(response.headers["Access-Control-Allow-Private-Network"], "true")
+
+    def test_options_rejects_untrusted_origins(self) -> None:
+        server = ThreadingHTTPServer(("127.0.0.1", 0), BookletRequestHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+
+        request = Request(
+            f"http://127.0.0.1:{server.server_port}/inspect",
+            method="OPTIONS",
+            headers={
+                "Origin": "https://example.com",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Private-Network": "true",
+            },
+        )
+
+        with self.assertRaises(Exception) as raised:
+            urlopen(request, timeout=5)
+
+        self.assertIn("HTTP Error 403", str(raised.exception))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,52 @@
+{
+  "name": "bookbookbook-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local desktop wrapper for Bookbookbook.",
+  "main": "main.cjs",
+  "scripts": {
+    "build:renderer": "npm --prefix ../pages run build",
+    "build:icon": "node scripts/make-icon.mjs",
+    "pack": "npm run build:renderer && npm run build:icon && electron-builder --mac dir",
+    "dist": "npm run build:renderer && npm run build:icon && electron-builder --mac dmg",
+    "smoke": "npm run build:renderer && node tests/smoke.mjs",
+    "start": "npm run build:renderer && electron ."
+  },
+  "author": "hyun2xyz",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "pdf-lib": "^1.17.1",
+    "playwright": "^1.60.0"
+  },
+  "build": {
+    "appId": "xyz.hyun2.bookbookbook",
+    "productName": "Bookbookbook",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      {
+        "from": "../pages/dist",
+        "to": "renderer",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.icns",
+      "identity": null,
+      "target": [
+        "dmg"
+      ]
+    },
+    "afterPack": "scripts/after-pack.cjs",
+    "dmg": {
+      "artifactName": "Bookbookbook-${version}.dmg"
+    }
+  }
+}

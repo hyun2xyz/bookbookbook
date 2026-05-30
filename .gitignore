@@ -10,3 +10,9 @@ local-package/output/*.pdf
 pages/node_modules/
 pages/dist/
 pages/tests/*.pdf
+desktop/node_modules/
+desktop/dist/
+desktop/tests/*.pdf
+desktop/build/icon.iconset/
+desktop/build/icon-source.png
+desktop/build/icon-square.png

@@ -4,12 +4,14 @@
 
 - `pages/`: GitHub Pages에 배포되는 브라우저 전용 정적 앱
 - `local-package/`: 기존 Python 로컬 서버 버전
+- `desktop/`: `pages/` 빌드를 로컬 macOS 앱과 DMG로 포장하는 Electron 버전
 
 ## 기본 판단
 
 - 새 사용자에게는 `pages/` 정적 앱을 우선 안내한다. 설치 없이 `https://hyun2xyz.github.io/bookbookbook/`에서 바로 쓰는 방식이다.
 - PDF 개인정보가 중요하다는 점은 계속 강조한다. `pages/` 방식은 PDF를 서버로 업로드하지 않고 브라우저 안에서 처리한다.
 - Python 기반 오프라인/로컬 서버가 필요할 때만 `local-package/`를 안내한다.
+- 사용자가 DMG나 로컬 앱을 원하면 `desktop/`을 안내한다. 이 방식은 서버를 띄우지 않고 `pages/dist`를 앱 안에서 로컬 파일로 연다.
 
 ## pages 정적 앱
 
@@ -58,6 +60,29 @@ python -m pip install -r requirements.txt
 PYTHONPATH=src python -m unittest discover -s tests -v
 ./run_app.sh
 ```
+
+## desktop macOS 앱
+
+- 위치: `desktop/`
+- 핵심 패키지: `electron`, `electron-builder`
+- `pages/dist/`를 Electron 앱의 `renderer/`로 포함한다.
+- 보안 설정은 `nodeIntegration: false`, `contextIsolation: true`, `sandbox: true`를 유지한다.
+- macOS 앱은 ad-hoc 서명으로 로컬 검증을 통과하게 만들지만, 공개 배포용 notarization은 별도 Apple Developer ID가 필요하다.
+
+주요 명령:
+
+```bash
+cd desktop
+npm install
+npm run smoke
+npm run dist
+```
+
+검증 기준:
+
+- `npm run smoke`가 Electron 앱에서 PDF 선택, 분석, 변환을 통과해야 한다.
+- `npm run dist`가 `desktop/dist/Bookbookbook-1.0.0.dmg`를 만들어야 한다.
+- DMG는 `hdiutil verify desktop/dist/Bookbookbook-1.0.0.dmg`로 검증한다.
 
 ## 문서 관리
 
