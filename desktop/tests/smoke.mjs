@@ -45,6 +45,8 @@ try {
     siteNoteFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".site-note p")).fontSize),
     siteNoteLinkFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".site-note a")).fontSize),
     autoBlankFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".auto-blank-notice")).fontSize),
+    previewTitle: document.querySelector(".preview-title h2")?.textContent?.trim(),
+    hasIntroToggle: Boolean(document.querySelector("[data-intro-toggle]")),
     siteNoteBottomGap: (() => {
       const letter = document.querySelector(".letter-card").getBoundingClientRect();
       const note = document.querySelector(".site-note").getBoundingClientRect();
@@ -65,6 +67,12 @@ try {
   }));
   if (!desktopSummary.hasLetterCard || !desktopSummary.hasUsageCard) {
     throw new Error("Expected the desktop intro area to be split into letter and usage cards");
+  }
+  if (desktopSummary.previewTitle !== "BOOK BOOK BOOK") {
+    throw new Error(`Expected preview title to read BOOK BOOK BOOK: ${JSON.stringify(desktopSummary)}`);
+  }
+  if (!desktopSummary.hasIntroToggle) {
+    throw new Error("Expected an intro collapse toggle button");
   }
   if (!desktopSummary.hasDraggableTitlebar) {
     throw new Error("Expected the hidden titlebar area to be draggable");
@@ -107,6 +115,26 @@ try {
   });
   if (updateMenuLabel !== "업데이트 확인") {
     throw new Error("Expected a top menu item for checking updates");
+  }
+
+  const introToggle = page.locator("[data-intro-toggle]");
+  await introToggle.click();
+  const collapsedSummary = await page.evaluate(() => ({
+    isCollapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
+    introVisible: Boolean(document.querySelector(".intro-panel")?.getClientRects().length),
+    expanded: document.querySelector("[data-intro-toggle]")?.getAttribute("aria-expanded"),
+  }));
+  if (!collapsedSummary.isCollapsed || collapsedSummary.introVisible || collapsedSummary.expanded !== "false") {
+    throw new Error(`Expected intro panel to collapse: ${JSON.stringify(collapsedSummary)}`);
+  }
+  await introToggle.click();
+  const expandedSummary = await page.evaluate(() => ({
+    isCollapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
+    introVisible: Boolean(document.querySelector(".intro-panel")?.getClientRects().length),
+    expanded: document.querySelector("[data-intro-toggle]")?.getAttribute("aria-expanded"),
+  }));
+  if (expandedSummary.isCollapsed || !expandedSummary.introVisible || expandedSummary.expanded !== "true") {
+    throw new Error(`Expected intro panel to expand again: ${JSON.stringify(expandedSummary)}`);
   }
 
   try {

@@ -40,6 +40,7 @@ try {
     });
     await page.goto(`http://127.0.0.1:${port}/`);
     const visibleText = normalizeText(await page.locator("body").innerText());
+    assertIncludes(visibleText, "BOOK BOOK BOOK");
     assertIncludes(visibleText, "PDF 업로드");
     assertIncludes(visibleText, "드래그 엔 드롭 가능");
     assertIncludes(visibleText, "PDF를 중철제본이 가능한 소책자 PDF로 만드는");

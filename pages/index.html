@@ -16,7 +16,7 @@
   <body>
     <div class="desktop-titlebar-drag" aria-hidden="true"></div>
     <main class="app-shell">
-      <aside class="intro-panel">
+      <aside class="intro-panel" id="intro-panel">
         <section class="letter-card" aria-label="Bookbookbook 편지">
           <div class="masthead">
             <div class="brand-mark">
@@ -53,9 +53,15 @@
       </aside>
 
       <section class="workspace-panel">
+        <button class="side-menu-toggle" type="button" data-intro-toggle aria-controls="intro-panel" aria-expanded="true" aria-label="소개와 사용설명서 접기">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </button>
+
         <form data-form>
           <div class="preview-title">
-            <h2>PDF PREVIEW</h2>
+            <h2>BOOK BOOK BOOK</h2>
           </div>
 
           <input data-file type="file" name="pdf" accept="application/pdf,.pdf" hidden>

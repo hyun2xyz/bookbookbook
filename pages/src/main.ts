@@ -5,6 +5,8 @@ import type { BlankPlacement } from "./imposition";
 import { type PreviewDocument, loadPreviewDocument } from "./preview";
 
 const form = getElement<HTMLFormElement>("[data-form]");
+const appShell = getElement<HTMLElement>(".app-shell");
+const introToggle = getElement<HTMLButtonElement>("[data-intro-toggle]");
 const fileInput = getElement<HTMLInputElement>("[data-file]");
 const dropZone = getElement<HTMLButtonElement>("[data-drop-zone]");
 const submitButton = getElement<HTMLButtonElement>("[data-submit]");
@@ -46,6 +48,12 @@ let previewRenderQueue: Promise<void> = Promise.resolve();
 let previewState: { document: PreviewDocument; currentPage: number } | null = null;
 let selectedPdfBytes: Uint8Array | null = null;
 let downloadUrl: string | null = null;
+
+introToggle.addEventListener("click", () => {
+  const isCollapsed = appShell.classList.toggle("is-intro-collapsed");
+  introToggle.setAttribute("aria-expanded", String(!isCollapsed));
+  introToggle.setAttribute("aria-label", isCollapsed ? "소개와 사용설명서 펼치기" : "소개와 사용설명서 접기");
+});
 
 dropZone.addEventListener("click", (event) => {
   event.stopPropagation();

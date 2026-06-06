@@ -80,6 +80,15 @@ a {
   hyphens: none;
 }
 
+.app-shell.is-intro-collapsed {
+  grid-template-columns: minmax(680px, 960px);
+  justify-content: center;
+}
+
+.app-shell.is-intro-collapsed .intro-panel {
+  display: none;
+}
+
 .letter-card,
 .usage-card {
   min-width: 0;
@@ -150,8 +159,39 @@ a {
 }
 
 .workspace-panel {
+  position: relative;
   min-width: 0;
   padding-top: 34px;
+}
+
+.side-menu-toggle {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  z-index: 20;
+  display: inline-grid;
+  gap: 4px;
+  width: 34px;
+  height: 30px;
+  align-content: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.side-menu-toggle span {
+  display: block;
+  width: 22px;
+  height: 1px;
+  background: var(--ink);
+}
+
+.side-menu-toggle:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 4px;
 }
 
 form {
@@ -748,6 +788,10 @@ html.desktop-liquid .app-shell {
   -webkit-backdrop-filter: none;
 }
 
+html.desktop-liquid .app-shell.is-intro-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 html.desktop-liquid .intro-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -787,7 +831,23 @@ html.desktop-liquid .usage-card {
 }
 
 html.desktop-liquid .workspace-panel {
+  position: relative;
   padding: 24px 22px 14px;
+}
+
+html.desktop-liquid .side-menu-toggle {
+  top: 22px;
+  right: 22px;
+  width: 30px;
+  height: 26px;
+  -webkit-app-region: no-drag;
+}
+
+html.desktop-liquid .side-menu-toggle span {
+  width: 20px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: rgba(32, 35, 38, 0.88);
 }
 
 html.desktop-liquid .brand-mark {
