@@ -17,7 +17,7 @@ await mkdir(buildDir, { recursive: true });
 await rm(iconset, { force: true, recursive: true });
 await mkdir(iconset, { recursive: true });
 
-run("sips", ["--resampleHeightWidthMax", "1024", source, "--out", resized]);
+run("sips", ["--resampleHeightWidthMax", "600", source, "--out", resized]);
 run("sips", ["--padToHeightWidth", "1024", "1024", "--padColor", "FFFFFF", resized, "--out", square]);
 
 const sizes = [

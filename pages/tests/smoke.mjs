@@ -43,6 +43,8 @@ try {
     assertIncludes(visibleText, "PDF 업로드");
     assertIncludes(visibleText, "드래그 엔 드롭 가능");
     assertIncludes(visibleText, "PDF를 중철제본이 가능한 소책자 PDF로 만드는");
+    assertIncludes(visibleText, "단! 재단선 도련선을 끄고 PDF 로 출력후에 북북북으로 변환하세요.");
+    await assertPaperControl(page);
     await convertFixture(page, {
       fixturePath: readerFixturePath,
       outputPath: readerOutputPath,
@@ -51,17 +53,23 @@ try {
         "원본 PDF 페이지": 4,
         "분리 후 책 쪽수": 6,
         "추가된 빈 페이지": 2,
-        "출력 인쇄면": 4,
+        "중철 인쇄면": 4,
+        "출력 용지 장수": 4,
+        "한 장당 배치": "1개",
       },
     });
+    await assertSmallPaperWarning(page);
     await convertFixture(page, {
       fixturePath: allSpreadFixturePath,
       outputPath: allSpreadOutputPath,
+      paperSize: "a3",
       expectedSummary: {
         "원본 PDF 페이지": 2,
         "분리 후 책 쪽수": 4,
         "추가된 빈 페이지": 0,
-        "출력 인쇄면": 2,
+        "중철 인쇄면": 2,
+        "출력 용지 장수": 2,
+        "한 장당 배치": "1개",
       },
     });
     assertNoPageErrors(pageErrors);
@@ -70,7 +78,7 @@ try {
   }
 
   await assertOutputPdf(readerOutputPath, 4, 840, 595);
-  await assertOutputPdf(allSpreadOutputPath, 2, 840, 595);
+  await assertOutputPdf(allSpreadOutputPath, 2, 1191, 842);
 
   console.log("Smoke test passed: browser converted mixed and all-spread PDFs into valid booklet PDFs.");
 } finally {
@@ -107,7 +115,7 @@ async function createAllSpreadFixturePdf(path) {
   await writeFile(path, await source.save());
 }
 
-async function convertFixture(page, { fixturePath, outputPath, inputMode, expectedSummary }) {
+async function convertFixture(page, { fixturePath, outputPath, inputMode, expectedSummary, paperSize = "none" }) {
   if (inputMode === "drop") {
     await dropFixture(page, fixturePath);
   } else {
@@ -130,6 +138,10 @@ async function convertFixture(page, { fixturePath, outputPath, inputMode, expect
   await assertFileControlsFollowAnalysis(page);
   await assertPageNumberFollowsFileName(page);
 
+  if (paperSize !== "none") {
+    await page.locator("[data-paper-size]").selectOption(paperSize);
+  }
+
   const blankPlacementVisible = await page.locator("[data-blank-placement]").isVisible();
   if (expectedSummary["추가된 빈 페이지"] > 0 && !blankPlacementVisible) {
     throw new Error("Expected blank page placement controls to be visible");
@@ -151,6 +163,15 @@ async function convertFixture(page, { fixturePath, outputPath, inputMode, expect
     page.getByRole("link", { name: "PDF 다운로드" }).click(),
   ]);
   await download.saveAs(outputPath);
+}
+
+async function assertSmallPaperWarning(page) {
+  await page.locator("[data-paper-size]").selectOption("custom");
+  await page.locator("[data-paper-width]").fill("100");
+  await page.locator("[data-paper-height]").fill("100");
+  await page.getByRole("button", { name: "소책자 만들기" }).click();
+  await page.getByText("출력 용지가 작습니다. 판형을 키워주세요.").waitFor({ timeout: 10_000 });
+  await page.locator("[data-paper-size]").selectOption("none");
 }
 
 async function dropFixture(page, fixturePath) {
@@ -246,6 +267,28 @@ async function assertPageNumberFollowsFileName(page) {
   if (!fileNameBox || !pageNumberBox || pageNumberBox.x <= fileNameBox.x) {
     throw new Error("Expected page number input to sit to the right of the selected file name");
   }
+}
+
+async function assertPaperControl(page) {
+  const paperSelect = page.locator("[data-paper-size]");
+  await paperSelect.waitFor({ timeout: 10_000 });
+  const value = await paperSelect.inputValue();
+  if (value !== "none") {
+    throw new Error(`Expected default paper setting to be none, received ${value}`);
+  }
+
+  const bindingBox = await page.locator(".binding-options").boundingBox();
+  const selectBox = await paperSelect.boundingBox();
+  if (!bindingBox || !selectBox || selectBox.y < bindingBox.y - 4 || selectBox.y > bindingBox.y + bindingBox.height + 4) {
+    throw new Error("Expected the paper selector to sit beside the binding controls");
+  }
+
+  await paperSelect.selectOption("custom");
+  const customControls = page.locator("[data-paper-custom]");
+  if (!(await customControls.isVisible())) {
+    throw new Error("Expected custom paper mm inputs to appear when custom paper is selected");
+  }
+  await paperSelect.selectOption("none");
 }
 
 function assertNoPageErrors(errors) {

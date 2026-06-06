@@ -1,4 +1,4 @@
-import { PDFDocument, type PDFEmbeddedPage, type PDFPage } from "pdf-lib";
+import { degrees, PDFDocument, rgb, type PDFEmbeddedPage, type PDFPage } from "pdf-lib";
 
 import {
   analyzeReaderLayout,
@@ -17,6 +17,8 @@ export interface ConversionSummary {
   readerPagesAfterPadding: number;
   blankPagesAdded: number;
   printerSpreads: number;
+  outputSheets: number;
+  spreadsPerOutputSheet: number;
 }
 
 export type DetectedPdfShape = "single-pages" | "all-spreads" | "mixed-pages-and-spreads";
@@ -29,6 +31,7 @@ export interface BookletAnalysis extends ConversionSummary {
 export interface ConvertOptions {
   binding: Binding;
   blankPlacement?: BlankPlacement;
+  trimMarks?: TrimMarkOptions;
 }
 
 export interface ConvertResult {
@@ -36,11 +39,42 @@ export interface ConvertResult {
   summary: ConversionSummary;
 }
 
+export interface TrimMarkOptions {
+  paperWidthMm: number;
+  paperHeightMm: number;
+}
+
 interface LogicalPage {
   page: PDFEmbeddedPage;
   width: number;
   height: number;
 }
+
+interface SheetLayout {
+  width: number;
+  height: number;
+  columns: number;
+  rows: number;
+  capacity: number;
+  gridX: number;
+  gridY: number;
+  cellWidth: number;
+  cellHeight: number;
+  spreadWidth: number;
+  spreadHeight: number;
+  spreadRotation: 0 | 90;
+}
+
+interface SlotRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const MIN_TRIM_MARK_MARGIN = millimetersToPoints(11);
+const TRIM_MARK_GAP = millimetersToPoints(2);
+const TRIM_MARK_LENGTH = millimetersToPoints(9);
 
 export async function convertPdfToBooklet(
   inputBytes: Uint8Array | ArrayBuffer,
@@ -58,9 +92,11 @@ export async function convertPdfToBooklet(
   const outputDoc = await PDFDocument.create();
   const logicalPages = await Promise.all(paddedSlots.map((slot) => embedLogicalPage(outputDoc, sourcePages, slot)));
   const printerPairs = buildPrinterPairs(logicalPages.length, options.binding);
+  const trimWidth = singlePage.width * 2;
+  const trimHeight = singlePage.height;
 
   printerPairs.forEach(([leftNumber, rightNumber]) => {
-    const sheet = outputDoc.addPage([singlePage.width * 2, singlePage.height]);
+    const sheet = outputDoc.addPage([trimWidth, trimHeight]);
     const leftPage = logicalPages[leftNumber - 1];
     const rightPage = logicalPages[rightNumber - 1];
 
@@ -68,16 +104,204 @@ export async function convertPdfToBooklet(
     drawLogicalPage(sheet, rightPage, singlePage.width, 0, singlePage.width, singlePage.height);
   });
 
+  const bookletBytes = await outputDoc.save();
+  const packedOutput = options.trimMarks
+    ? await packPrinterSpreadsOnOutputSheets(bookletBytes, trimWidth, trimHeight, options.trimMarks)
+    : {
+        bytes: bookletBytes,
+        outputSheets: printerPairs.length,
+        spreadsPerOutputSheet: 1,
+      };
+
   return {
-    bytes: await outputDoc.save(),
+    bytes: packedOutput.bytes,
     summary: {
       originalPdfPages: sourcePages.length,
       readerPagesBeforePadding: readerSlots.length,
       readerPagesAfterPadding: paddedSlots.length,
       blankPagesAdded: paddedSlots.length - readerSlots.length,
       printerSpreads: printerPairs.length,
+      outputSheets: packedOutput.outputSheets,
+      spreadsPerOutputSheet: packedOutput.spreadsPerOutputSheet,
     },
   };
+}
+
+async function packPrinterSpreadsOnOutputSheets(
+  bookletBytes: Uint8Array,
+  spreadWidth: number,
+  spreadHeight: number,
+  trimMarks: TrimMarkOptions,
+): Promise<{ bytes: Uint8Array; outputSheets: number; spreadsPerOutputSheet: number }> {
+  const sourceDoc = await PDFDocument.load(bookletBytes);
+  const sourcePages = sourceDoc.getPages();
+  const outputDoc = await PDFDocument.create();
+  const embeddedSpreads = await outputDoc.embedPdf(
+    bookletBytes,
+    sourcePages.map((_page, index) => index),
+  );
+  const sheetLayout = resolveSheetLayout(trimMarks, spreadWidth, spreadHeight);
+  const pairSpan = sheetLayout.capacity * 2;
+
+  for (let baseIndex = 0; baseIndex < embeddedSpreads.length; baseIndex += pairSpan) {
+    const frontSheet = outputDoc.addPage([sheetLayout.width, sheetLayout.height]);
+    const backSheet = outputDoc.addPage([sheetLayout.width, sheetLayout.height]);
+
+    for (let slotIndex = 0; slotIndex < sheetLayout.capacity; slotIndex += 1) {
+      const frontSpread = embeddedSpreads[baseIndex + slotIndex * 2];
+      const backSpread = embeddedSpreads[baseIndex + slotIndex * 2 + 1];
+      const slot = getSheetSlot(sheetLayout, slotIndex);
+
+      if (frontSpread) {
+        drawPackedSpread(frontSheet, frontSpread, slot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
+        drawTrimMarks(frontSheet, slot.x, slot.y, slot.width, slot.height);
+      }
+
+      if (backSpread) {
+        drawPackedSpread(backSheet, backSpread, slot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
+        drawTrimMarks(backSheet, slot.x, slot.y, slot.width, slot.height);
+      }
+    }
+  }
+
+  return {
+    bytes: await outputDoc.save(),
+    outputSheets: outputDoc.getPageCount(),
+    spreadsPerOutputSheet: sheetLayout.capacity,
+  };
+}
+
+function resolveSheetLayout(trimMarks: TrimMarkOptions, trimWidth: number, trimHeight: number): SheetLayout {
+  const paperWidth = validatePaperMillimeters(trimMarks.paperWidthMm, "가로");
+  const paperHeight = validatePaperMillimeters(trimMarks.paperHeightMm, "세로");
+  const paperLayouts = [
+    { width: millimetersToPoints(paperWidth), height: millimetersToPoints(paperHeight) },
+    { width: millimetersToPoints(paperHeight), height: millimetersToPoints(paperWidth) },
+  ];
+  const candidates = paperLayouts.flatMap((paper) =>
+    ([0, 90] as const).map((spreadRotation) => {
+      const spreadWidth = spreadRotation === 90 ? trimHeight : trimWidth;
+      const spreadHeight = spreadRotation === 90 ? trimWidth : trimHeight;
+      const cellWidth = spreadWidth + MIN_TRIM_MARK_MARGIN * 2;
+      const cellHeight = spreadHeight + MIN_TRIM_MARK_MARGIN * 2;
+      const columns = Math.floor(paper.width / cellWidth);
+      const rows = Math.floor(paper.height / cellHeight);
+      const capacity = columns * rows;
+      const gridWidth = columns * cellWidth;
+      const gridHeight = rows * cellHeight;
+
+      return {
+        ...paper,
+        columns,
+        rows,
+        capacity,
+        gridX: (paper.width - gridWidth) / 2,
+        gridY: (paper.height - gridHeight) / 2,
+        cellWidth,
+        cellHeight,
+        spreadWidth,
+        spreadHeight,
+        spreadRotation,
+        gridWaste: paper.width * paper.height - gridWidth * gridHeight,
+      };
+    }),
+  );
+  const fittingLayouts = candidates.filter((layout) => layout.capacity > 0);
+
+  if (fittingLayouts.length === 0) {
+    throw new Error("출력 용지가 작습니다. 판형을 키워주세요.");
+  }
+
+  fittingLayouts.sort((a, b) => {
+    if (b.capacity !== a.capacity) {
+      return b.capacity - a.capacity;
+    }
+
+    if (a.gridWaste !== b.gridWaste) {
+      return a.gridWaste - b.gridWaste;
+    }
+
+    return a.spreadRotation - b.spreadRotation;
+  });
+
+  return fittingLayouts[0];
+}
+
+function validatePaperMillimeters(value: number, label: string): number {
+  if (!Number.isFinite(value) || value < 20 || value > 2000) {
+    throw new Error(`출력 용지 ${label} mm를 확인하세요.`);
+  }
+
+  return value;
+}
+
+function millimetersToPoints(value: number): number {
+  return (value * 72) / 25.4;
+}
+
+function drawTrimMarks(sheet: PDFPage, trimX: number, trimY: number, trimWidth: number, trimHeight: number): void {
+  const trimLineColor = rgb(0.35, 0.35, 0.35);
+  const trimRight = trimX + trimWidth;
+  const trimTop = trimY + trimHeight;
+
+  [
+    [[trimX - TRIM_MARK_GAP - TRIM_MARK_LENGTH, trimY], [trimX - TRIM_MARK_GAP, trimY]],
+    [[trimX, trimY - TRIM_MARK_GAP - TRIM_MARK_LENGTH], [trimX, trimY - TRIM_MARK_GAP]],
+    [[trimRight + TRIM_MARK_GAP, trimY], [trimRight + TRIM_MARK_GAP + TRIM_MARK_LENGTH, trimY]],
+    [[trimRight, trimY - TRIM_MARK_GAP - TRIM_MARK_LENGTH], [trimRight, trimY - TRIM_MARK_GAP]],
+    [[trimX - TRIM_MARK_GAP - TRIM_MARK_LENGTH, trimTop], [trimX - TRIM_MARK_GAP, trimTop]],
+    [[trimX, trimTop + TRIM_MARK_GAP], [trimX, trimTop + TRIM_MARK_GAP + TRIM_MARK_LENGTH]],
+    [[trimRight + TRIM_MARK_GAP, trimTop], [trimRight + TRIM_MARK_GAP + TRIM_MARK_LENGTH, trimTop]],
+    [[trimRight, trimTop + TRIM_MARK_GAP], [trimRight, trimTop + TRIM_MARK_GAP + TRIM_MARK_LENGTH]],
+  ].forEach(([[startX, startY], [endX, endY]]) => {
+    sheet.drawLine({
+      start: { x: startX, y: startY },
+      end: { x: endX, y: endY },
+      thickness: 0.45,
+      color: trimLineColor,
+      opacity: 0.72,
+    });
+  });
+}
+
+function getSheetSlot(sheetLayout: SheetLayout, slotIndex: number): SlotRect {
+  const column = slotIndex % sheetLayout.columns;
+  const row = Math.floor(slotIndex / sheetLayout.columns);
+  const visualRow = sheetLayout.rows - 1 - row;
+
+  return {
+    x: sheetLayout.gridX + column * sheetLayout.cellWidth + MIN_TRIM_MARK_MARGIN,
+    y: sheetLayout.gridY + visualRow * sheetLayout.cellHeight + MIN_TRIM_MARK_MARGIN,
+    width: sheetLayout.spreadWidth,
+    height: sheetLayout.spreadHeight,
+  };
+}
+
+function drawPackedSpread(
+  sheet: PDFPage,
+  spread: PDFEmbeddedPage,
+  slot: SlotRect,
+  spreadWidth: number,
+  spreadHeight: number,
+  rotation: 0 | 90,
+): void {
+  if (rotation === 90) {
+    sheet.drawPage(spread, {
+      x: slot.x + slot.width,
+      y: slot.y,
+      width: spreadWidth,
+      height: spreadHeight,
+      rotate: degrees(90),
+    });
+    return;
+  }
+
+  sheet.drawPage(spread, {
+    x: slot.x,
+    y: slot.y,
+    width: spreadWidth,
+    height: spreadHeight,
+  });
 }
 
 export async function analyzePdfForBooklet(inputBytes: Uint8Array | ArrayBuffer): Promise<BookletAnalysis> {
@@ -96,6 +320,8 @@ export async function analyzePdfForBooklet(inputBytes: Uint8Array | ArrayBuffer)
     readerPagesAfterPadding: paddedSlots.length,
     blankPagesAdded: paddedSlots.length - layout.slots.length,
     printerSpreads: buildPrinterPairs(paddedSlots.length).length,
+    outputSheets: buildPrinterPairs(paddedSlots.length).length,
+    spreadsPerOutputSheet: 1,
     detectedPdfShape: detectPdfShape(layout.slots),
     recommendedBlankPlacement: "before-back-cover",
   };

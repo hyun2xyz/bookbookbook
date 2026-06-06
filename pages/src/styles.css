@@ -80,6 +80,11 @@ a {
   hyphens: none;
 }
 
+.letter-card,
+.usage-card {
+  min-width: 0;
+}
+
 .masthead {
   display: block;
 }
@@ -227,6 +232,45 @@ form {
   align-items: center;
   color: var(--ink);
   font-size: 13px;
+}
+
+.paper-control,
+.paper-custom {
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.paper-size-select,
+.paper-mm-input {
+  min-width: 0;
+  height: 24px;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+.paper-size-select {
+  width: 72px;
+  padding-right: 2px;
+}
+
+.paper-mm-input {
+  width: 64px;
+  text-align: right;
+}
+
+.paper-size-select:focus-visible,
+.paper-mm-input:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.paper-custom[hidden] {
+  display: none;
 }
 
 .binding-options input[type="radio"],
@@ -644,5 +688,461 @@ p {
 
   .blank-placement {
     grid-template-columns: 1fr;
+  }
+}
+
+html.desktop-liquid {
+  --bg: #ffffff;
+  --ink: #202326;
+  --muted: #70757a;
+  --line: rgba(63, 70, 76, 0.24);
+  --soft-line: rgba(63, 70, 76, 0.14);
+  --blue: #0a43c6;
+  --mint: #c9f6dc;
+  --panel: #ffffff;
+  background: #ffffff;
+  font-synthesis-weight: none;
+}
+
+html.desktop-liquid body {
+  height: 100vh;
+  min-height: 0;
+  padding: 6px;
+  overflow: hidden;
+  background: #ffffff;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+html.desktop-liquid body::before {
+  content: none;
+}
+
+html.desktop-liquid .desktop-titlebar-drag {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  height: 34px;
+  -webkit-app-region: drag;
+}
+
+html.desktop-liquid .app-shell {
+  position: relative;
+  z-index: 1;
+  grid-template-columns: minmax(242px, 300px) minmax(520px, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 6px;
+  align-items: stretch;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.desktop-liquid .intro-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: hidden;
+}
+
+html.desktop-liquid .letter-card,
+html.desktop-liquid .usage-card,
+html.desktop-liquid .workspace-panel {
+  min-width: 0;
+  border: 1px solid rgba(32, 35, 38, 0.13);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.desktop-liquid .letter-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 22px;
+}
+
+html.desktop-liquid .usage-card {
+  display: grid;
+  align-content: start;
+  padding: 18px 20px;
+  overflow: hidden;
+}
+
+html.desktop-liquid .workspace-panel {
+  padding: 24px 22px 14px;
+}
+
+html.desktop-liquid .brand-mark {
+  width: min(100%, 185px);
+  margin: 12px auto 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.desktop-liquid .brand-drawing {
+  width: 100%;
+  margin: 0 auto;
+  display: block;
+  filter: none;
+}
+
+html.desktop-liquid .intro-copy {
+  margin-top: 12px;
+  color: rgba(32, 35, 38, 0.78);
+  font-size: 9.05px;
+  line-height: 1.84;
+}
+
+html.desktop-liquid .intro-copy p {
+  max-width: none;
+  margin-bottom: 8px;
+}
+
+html.desktop-liquid .intro-link {
+  color: rgba(20, 22, 24, 0.82);
+  box-shadow: inset 0 -0.46em 0 rgba(201, 246, 220, 0.78);
+}
+
+html.desktop-liquid .site-note {
+  margin-top: auto;
+  margin-bottom: 0;
+  padding-top: 10px;
+}
+
+html.desktop-liquid .site-note p,
+html.desktop-liquid .site-note a {
+  font-size: 10.5px;
+}
+
+html.desktop-liquid .site-note p,
+html.desktop-liquid .site-note a,
+html.desktop-liquid p,
+html.desktop-liquid .selected-file {
+  color: rgba(72, 77, 82, 0.74);
+}
+
+html.desktop-liquid .usage-guide {
+  margin-top: 0;
+  padding-top: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html.desktop-liquid .usage-guide h2,
+html.desktop-liquid .usage-guide h3 {
+  color: rgba(20, 23, 26, 0.9);
+  font-weight: var(--font-bold);
+}
+
+html.desktop-liquid .analysis-panel h3 {
+  color: rgba(20, 23, 26, 0.9);
+  font-weight: var(--font-light);
+}
+
+html.desktop-liquid .auto-blank-notice {
+  margin-top: 9px;
+  padding: 0 2px;
+  border-top: 0;
+  color: rgba(72, 77, 82, 0.62);
+  font-size: 10.5px;
+  line-height: 1.38;
+}
+
+html.desktop-liquid .usage-guide h2 {
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+html.desktop-liquid .usage-guide h3 {
+  margin-top: 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+html.desktop-liquid .usage-guide ol {
+  gap: 3px;
+  font-size: 12.2px;
+  line-height: 1.34;
+}
+
+html.desktop-liquid .usage-guide p {
+  margin-top: 6px;
+  font-size: 11.8px;
+  line-height: 1.46;
+}
+
+html.desktop-liquid form {
+  min-height: 100%;
+  align-content: start;
+  gap: 10px;
+}
+
+html.desktop-liquid .preview-title {
+  margin-bottom: 2px;
+}
+
+html.desktop-liquid .preview-title h2 {
+  color: rgba(32, 35, 38, 0.92);
+  font-size: 20px;
+  font-weight: var(--font-light);
+  text-transform: none;
+}
+
+html.desktop-liquid .preview-frame {
+  height: clamp(320px, 42vh, 430px);
+  min-height: 0;
+  border-color: rgba(32, 35, 38, 0.14);
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.desktop-liquid .preview-frame.is-dragging {
+  border-color: rgba(116, 206, 153, 0.68);
+  background: rgba(236, 255, 244, 0.58);
+}
+
+html.desktop-liquid .preview-empty {
+  gap: 4px;
+}
+
+html.desktop-liquid .drop-zone {
+  color: rgba(20, 23, 26, 0.92);
+  font-size: 16px;
+  text-decoration-color: rgba(201, 246, 220, 0.95);
+  text-decoration-thickness: 7px;
+  text-underline-offset: -3px;
+  text-decoration-skip-ink: none;
+}
+
+html.desktop-liquid .preview-empty [data-preview-empty-message] {
+  color: rgba(72, 77, 82, 0.58);
+  font-size: 11px;
+}
+
+html.desktop-liquid .preview-frame canvas {
+  border-radius: 0;
+  box-shadow:
+    0 12px 36px rgba(38, 48, 55, 0.16),
+    0 0 0 1px rgba(32, 35, 38, 0.12);
+}
+
+html.desktop-liquid .analysis-panel {
+  padding: 10px 2px 0;
+  border-top-color: rgba(63, 70, 76, 0.13);
+}
+
+html.desktop-liquid .analysis-grid,
+html.desktop-liquid .result-grid {
+  color: rgba(72, 77, 82, 0.68);
+}
+
+html.desktop-liquid .blank-placement {
+  margin: 12px 0 14px;
+  padding: 13px 16px 15px;
+  border-color: rgba(32, 35, 38, 0.13);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.desktop-liquid .blank-placement legend {
+  color: rgba(72, 77, 82, 0.62);
+}
+
+html.desktop-liquid .preview-actions {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 32%);
+  gap: 16px;
+  align-items: start;
+}
+
+html.desktop-liquid .file-controls {
+  gap: 10px;
+}
+
+html.desktop-liquid .binding-options {
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(32, 35, 38, 0.13);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.desktop-liquid .binding-options label,
+html.desktop-liquid .blank-placement label {
+  border-radius: 999px;
+  color: rgba(24, 27, 30, 0.92);
+  font-size: 13px;
+}
+
+html.desktop-liquid .binding-options label {
+  padding: 6px 10px;
+}
+
+html.desktop-liquid .binding-options .paper-control,
+html.desktop-liquid .binding-options .paper-custom {
+  padding: 5px 8px;
+}
+
+html.desktop-liquid .paper-size-select,
+html.desktop-liquid .paper-mm-input {
+  height: 22px;
+  border-color: rgba(32, 35, 38, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+}
+
+html.desktop-liquid .paper-size-select {
+  width: 70px;
+}
+
+html.desktop-liquid .paper-mm-input {
+  width: 66px;
+}
+
+html.desktop-liquid .binding-options label:has(input[type="radio"]:checked) {
+  background: rgba(201, 246, 220, 0.42);
+  box-shadow: none;
+}
+
+html.desktop-liquid .binding-options input[type="radio"],
+html.desktop-liquid .blank-placement input[type="radio"] {
+  width: 15px;
+  height: 15px;
+  border-color: rgba(88, 95, 101, 0.46);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+html.desktop-liquid .binding-options input[type="radio"]:checked,
+html.desktop-liquid .blank-placement input[type="radio"]:checked {
+  border-color: rgba(112, 198, 148, 0.9);
+  background: radial-gradient(circle, rgba(201, 246, 220, 0.98) 0 50%, rgba(255, 255, 255, 0.86) 54%);
+  box-shadow: 0 0 0 4px rgba(201, 246, 220, 0.22);
+}
+
+html.desktop-liquid .file-meta {
+  min-height: 32px;
+}
+
+html.desktop-liquid .page-indicator,
+html.desktop-liquid .blank-page-number {
+  border-color: rgba(32, 35, 38, 0.14);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+html.desktop-liquid .primary,
+html.desktop-liquid .download {
+  min-height: 50px;
+  border: 1px solid rgba(32, 35, 38, 0.13);
+  border-radius: 24px;
+  background: #ffffff;
+  color: rgba(20, 23, 26, 0.94);
+  font-size: 16px;
+  font-weight: var(--font-light);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.desktop-liquid .primary {
+  width: 100%;
+  min-width: 0;
+}
+
+html.desktop-liquid .primary span,
+html.desktop-liquid .download {
+  text-decoration: none;
+  box-shadow: inset 0 -0.44em 0 rgba(201, 246, 220, 0.9);
+}
+
+html.desktop-liquid .download {
+  box-shadow: none;
+}
+
+html.desktop-liquid .primary:hover,
+html.desktop-liquid .download:hover {
+  border-color: rgba(135, 145, 153, 0.34);
+  background: #ffffff;
+}
+
+html.desktop-liquid .status {
+  min-height: 18px;
+  color: rgba(72, 77, 82, 0.68);
+}
+
+html.desktop-liquid .result {
+  padding-top: 10px;
+  border-top-color: rgba(63, 70, 76, 0.13);
+}
+
+html.desktop-liquid form:has(.result:not([hidden])) {
+  gap: 8px;
+}
+
+html.desktop-liquid form:has(.result:not([hidden])) .preview-frame {
+  height: clamp(220px, 27vh, 320px);
+}
+
+html.desktop-liquid form:has(.result:not([hidden])) .blank-placement {
+  margin: 10px 0 12px;
+}
+
+html.desktop-liquid form:has(.result:not([hidden])) .download {
+  min-height: 48px;
+}
+
+html.desktop-liquid form:has(.result:not([hidden])) .primary {
+  min-height: 46px;
+}
+
+@media (max-width: 960px) {
+  html.desktop-liquid .app-shell {
+    grid-template-columns: 1fr;
+    width: min(760px, calc(100vw - 28px));
+    height: auto;
+    min-height: calc(100vh - 28px);
+  }
+
+  html.desktop-liquid .intro-panel,
+  html.desktop-liquid .workspace-panel {
+    padding-top: 42px;
+  }
+
+  html.desktop-liquid .usage-guide {
+    margin-top: 20px;
   }
 }

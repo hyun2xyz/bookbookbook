@@ -1,6 +1,6 @@
 import "./styles.css";
 
-import { analyzePdfForBooklet, type BookletAnalysis, convertPdfToBooklet } from "./pdf-engine";
+import { analyzePdfForBooklet, type BookletAnalysis, convertPdfToBooklet, type TrimMarkOptions } from "./pdf-engine";
 import type { BlankPlacement } from "./imposition";
 import { type PreviewDocument, loadPreviewDocument } from "./preview";
 
@@ -22,6 +22,23 @@ const analysisBox = getElement<HTMLElement>("[data-analysis]");
 const blankPlacementBox = getElement<HTMLFieldSetElement>("[data-blank-placement]");
 const blankPlacementNote = getElement<HTMLElement>("[data-blank-placement-note]");
 const blankPageNumberInput = getElement<HTMLInputElement>("[data-blank-page-number]");
+const paperSizeSelect = getElement<HTMLSelectElement>("[data-paper-size]");
+const paperCustomControls = getElement<HTMLElement>("[data-paper-custom]");
+const paperWidthInput = getElement<HTMLInputElement>("[data-paper-width]");
+const paperHeightInput = getElement<HTMLInputElement>("[data-paper-height]");
+
+const PAPER_SIZES_MM = {
+  a4: { width: 210, height: 297 },
+  a3: { width: 297, height: 420 },
+  b5: { width: 176, height: 250 },
+  b4: { width: 250, height: 353 },
+  sra4: { width: 225, height: 320 },
+  sra3: { width: 320, height: 450 },
+  letter: { width: 216, height: 279 },
+  tabloid: { width: 279, height: 432 },
+} as const;
+
+type PaperSize = keyof typeof PAPER_SIZES_MM;
 
 let previewRequestId = 0;
 let previewRenderToken = 0;
@@ -45,6 +62,8 @@ blankPageNumberInput.addEventListener("focus", () => {
     customPlacement.checked = true;
   }
 });
+
+paperSizeSelect.addEventListener("change", updatePaperCustomVisibility);
 
 pageNumberInput.addEventListener("change", () => {
   void showPreviewPageFromInput();
@@ -90,7 +109,8 @@ form.addEventListener("submit", async (event) => {
     const formData = new FormData(form);
     const binding = formData.get("binding") === "right" ? "right" : "left";
     const blankPlacement = parseBlankPlacement(formData);
-    const result = await convertPdfToBooklet(selectedPdfBytes, { binding, blankPlacement });
+    const trimMarks = parseTrimMarks(formData);
+    const result = await convertPdfToBooklet(selectedPdfBytes, { binding, blankPlacement, trimMarks });
     const outputBuffer = new ArrayBuffer(result.bytes.byteLength);
     new Uint8Array(outputBuffer).set(result.bytes);
     const blob = new Blob([outputBuffer], { type: "application/pdf" });
@@ -104,7 +124,9 @@ form.addEventListener("submit", async (event) => {
         <span>원본 PDF 페이지</span><strong>${result.summary.originalPdfPages}</strong>
         <span>분리 후 책 쪽수</span><strong>${result.summary.readerPagesBeforePadding}</strong>
         <span>추가된 빈 페이지</span><strong>${result.summary.blankPagesAdded}</strong>
-        <span>출력 인쇄면</span><strong>${result.summary.printerSpreads}</strong>
+        <span>중철 인쇄면</span><strong>${result.summary.printerSpreads}</strong>
+        <span>출력 용지 장수</span><strong>${result.summary.outputSheets}</strong>
+        <span>한 장당 배치</span><strong>${result.summary.spreadsPerOutputSheet}개</strong>
       </div>
       <a class="download" href="${downloadUrl}" download="${escapeAttribute(outputName)}">PDF 다운로드</a>
     `;
@@ -273,7 +295,7 @@ function renderAnalysis(analysis: BookletAnalysis): void {
       <span>원본 PDF 페이지</span><strong>${analysis.originalPdfPages}</strong>
       <span>분리 후 책 쪽수</span><strong>${analysis.readerPagesBeforePadding}</strong>
       <span>필요한 빈 페이지</span><strong>${analysis.blankPagesAdded}</strong>
-      <span>출력 인쇄면</span><strong>${analysis.printerSpreads}</strong>
+      <span>중철 인쇄면</span><strong>${analysis.printerSpreads}</strong>
     </div>
   `;
 
@@ -329,6 +351,47 @@ function parseBlankPlacement(formData: FormData): BlankPlacement {
   }
 
   return "before-back-cover";
+}
+
+function parseTrimMarks(formData: FormData): TrimMarkOptions | undefined {
+  const paperSize = String(formData.get("paperSize") ?? "none");
+
+  if (paperSize === "none") {
+    return undefined;
+  }
+
+  if (paperSize === "custom") {
+    return {
+      paperWidthMm: parsePaperDimension(formData.get("paperWidthMm"), "가로"),
+      paperHeightMm: parsePaperDimension(formData.get("paperHeightMm"), "세로"),
+    };
+  }
+
+  const preset = PAPER_SIZES_MM[paperSize as PaperSize];
+  if (!preset) {
+    throw new Error("출력 용지를 선택하세요.");
+  }
+
+  return {
+    paperWidthMm: preset.width,
+    paperHeightMm: preset.height,
+  };
+}
+
+function parsePaperDimension(value: FormDataEntryValue | null, label: string): number {
+  const millimeters = Number(String(value ?? "").trim());
+  if (!Number.isFinite(millimeters) || millimeters < 20 || millimeters > 2000) {
+    throw new Error(`출력 용지 ${label} mm를 확인하세요.`);
+  }
+
+  return millimeters;
+}
+
+function updatePaperCustomVisibility(): void {
+  const isCustom = paperSizeSelect.value === "custom";
+  paperCustomControls.hidden = !isCustom;
+  paperWidthInput.required = isCustom;
+  paperHeightInput.required = isCustom;
 }
 
 function revokeDownloadUrl(): void {
