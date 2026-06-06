@@ -53,6 +53,8 @@ Bookbookbook should choose the most efficient layout automatically:
 
 The app should support 1, 2, 3, or more spreads per output sheet whenever they fit. It must not stop at only one or two spreads.
 
+The packed grid must always be centered on the selected output paper, both horizontally and vertically. This is required because duplex printers often have front/back registration drift. If there is leftover paper area, Bookbookbook should split that leftover area evenly on both sides instead of pushing the grid toward one edge.
+
 ## Duplex Ordering
 
 The packed output must keep duplex pairs aligned by slot.
@@ -64,6 +66,7 @@ For a sheet that fits `n` spreads:
 - Page `1` and page `2` occupy the same physical slot.
 - Page `3` and page `4` occupy the same physical slot.
 - Page `5` and page `6` occupy the same physical slot.
+- Front and back output sheets use the exact same centered slot coordinates.
 
 Example for two spreads per output sheet:
 
