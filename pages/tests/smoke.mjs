@@ -43,8 +43,18 @@ try {
     assertIncludes(visibleText, "BOOK BOOK BOOK");
     assertIncludes(visibleText, "PDF 업로드");
     assertIncludes(visibleText, "드래그 엔 드롭 가능");
-    assertIncludes(visibleText, "PDF를 중철제본이 가능한 소책자 PDF로 만드는");
-    assertIncludes(visibleText, "단! 재단선 도련선을 끄고 PDF 로 출력후에 북북북으로 변환하세요.");
+    const defaultIntroState = await page.evaluate(() => ({
+      collapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
+      introVisible: Boolean(document.querySelector(".intro-panel")?.getClientRects().length),
+      expanded: document.querySelector("[data-intro-toggle]")?.getAttribute("aria-expanded"),
+    }));
+    if (!defaultIntroState.collapsed || defaultIntroState.introVisible || defaultIntroState.expanded !== "false") {
+      throw new Error(`Expected intro panel to be collapsed by default: ${JSON.stringify(defaultIntroState)}`);
+    }
+    await page.locator("[data-intro-toggle]").click();
+    const openedText = normalizeText(await page.locator("body").innerText());
+    assertIncludes(openedText, "PDF를 중철제본이 가능한 소책자 PDF로 만드는");
+    assertIncludes(openedText, "단! 재단선 도련선을 끄고 PDF 로 출력후에 북북북으로 변환하세요.");
     await assertPaperControl(page);
     await convertFixture(page, {
       fixturePath: readerFixturePath,

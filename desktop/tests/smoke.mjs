@@ -47,20 +47,19 @@ try {
     autoBlankFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".auto-blank-notice")).fontSize),
     previewTitle: document.querySelector(".preview-title h2")?.textContent?.trim(),
     hasIntroToggle: Boolean(document.querySelector("[data-intro-toggle]")),
+    isIntroCollapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
+    introVisible: Boolean(document.querySelector(".intro-panel")?.getClientRects().length),
+    introExpanded: document.querySelector("[data-intro-toggle]")?.getAttribute("aria-expanded"),
     siteNoteBottomGap: (() => {
       const letter = document.querySelector(".letter-card").getBoundingClientRect();
       const note = document.querySelector(".site-note").getBoundingClientRect();
       return Math.round(letter.bottom - note.bottom);
     })(),
-    usageCardFits: (() => {
-      const card = document.querySelector(".usage-card");
-      return card ? card.scrollHeight <= card.clientHeight + 1 : false;
-    })(),
     shellFillsWindow: (() => {
       const shell = document.querySelector(".app-shell");
       return shell ? shell.getBoundingClientRect().width >= window.innerWidth - 14 : false;
     })(),
-    hasUpdatedCopy: document.body.innerText.includes("웹/앱 인데요"),
+    hasUpdatedCopy: document.body.textContent.includes("웹/앱 인데요"),
     width: window.outerWidth,
     height: window.outerHeight,
     scrollHeight: document.documentElement.scrollHeight,
@@ -73,6 +72,9 @@ try {
   }
   if (!desktopSummary.hasIntroToggle) {
     throw new Error("Expected an intro collapse toggle button");
+  }
+  if (!desktopSummary.isIntroCollapsed || desktopSummary.introVisible || desktopSummary.introExpanded !== "false") {
+    throw new Error(`Expected the desktop intro area to be collapsed by default: ${JSON.stringify(desktopSummary)}`);
   }
   if (!desktopSummary.hasDraggableTitlebar) {
     throw new Error("Expected the hidden titlebar area to be draggable");
@@ -98,9 +100,6 @@ try {
   if (!desktopSummary.shellFillsWindow) {
     throw new Error("Expected the desktop Liquid Glass shell to use the available window width");
   }
-  if (!desktopSummary.usageCardFits) {
-    throw new Error("Expected the usage card content to fit inside the initial desktop window");
-  }
   if (!desktopSummary.hasUpdatedCopy) {
     throw new Error("Expected intro copy to describe Bookbookbook as a web/app");
   }
@@ -119,22 +118,37 @@ try {
 
   const introToggle = page.locator("[data-intro-toggle]");
   await introToggle.click();
+  const expandedSummary = await page.evaluate(() => ({
+    isCollapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
+    introVisible: Boolean(document.querySelector(".intro-panel")?.getClientRects().length),
+    expanded: document.querySelector("[data-intro-toggle]")?.getAttribute("aria-expanded"),
+    usageCardFits: (() => {
+      const card = document.querySelector(".usage-card");
+      return card ? card.scrollHeight <= card.clientHeight + 1 : false;
+    })(),
+    introOpensOnRight: (() => {
+      const intro = document.querySelector(".intro-panel")?.getBoundingClientRect();
+      const workspace = document.querySelector(".workspace-panel")?.getBoundingClientRect();
+      return Boolean(intro && workspace && intro.left > workspace.left);
+    })(),
+  }));
+  if (expandedSummary.isCollapsed || !expandedSummary.introVisible || expandedSummary.expanded !== "true") {
+    throw new Error(`Expected intro panel to expand: ${JSON.stringify(expandedSummary)}`);
+  }
+  if (!expandedSummary.introOpensOnRight) {
+    throw new Error(`Expected intro panel to open on the right side: ${JSON.stringify(expandedSummary)}`);
+  }
+  if (!expandedSummary.usageCardFits) {
+    throw new Error(`Expected the usage card content to fit inside the desktop window: ${JSON.stringify(expandedSummary)}`);
+  }
+  await introToggle.click();
   const collapsedSummary = await page.evaluate(() => ({
     isCollapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
     introVisible: Boolean(document.querySelector(".intro-panel")?.getClientRects().length),
     expanded: document.querySelector("[data-intro-toggle]")?.getAttribute("aria-expanded"),
   }));
   if (!collapsedSummary.isCollapsed || collapsedSummary.introVisible || collapsedSummary.expanded !== "false") {
-    throw new Error(`Expected intro panel to collapse: ${JSON.stringify(collapsedSummary)}`);
-  }
-  await introToggle.click();
-  const expandedSummary = await page.evaluate(() => ({
-    isCollapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
-    introVisible: Boolean(document.querySelector(".intro-panel")?.getClientRects().length),
-    expanded: document.querySelector("[data-intro-toggle]")?.getAttribute("aria-expanded"),
-  }));
-  if (expandedSummary.isCollapsed || !expandedSummary.introVisible || expandedSummary.expanded !== "true") {
-    throw new Error(`Expected intro panel to expand again: ${JSON.stringify(expandedSummary)}`);
+    throw new Error(`Expected intro panel to collapse again: ${JSON.stringify(collapsedSummary)}`);
   }
 
   try {

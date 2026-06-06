@@ -64,7 +64,7 @@ a {
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(260px, 330px) minmax(680px, 960px);
+  grid-template-columns: minmax(680px, 960px) minmax(260px, 330px);
   gap: clamp(48px, 7vw, 116px);
   min-height: 100vh;
   width: min(1360px, calc(100vw - 96px));
@@ -74,6 +74,7 @@ a {
 }
 
 .intro-panel {
+  order: 2;
   min-width: 0;
   word-break: keep-all;
   overflow-wrap: normal;
@@ -159,9 +160,10 @@ a {
 }
 
 .workspace-panel {
+  order: 1;
   position: relative;
   min-width: 0;
-  padding-top: 34px;
+  padding-top: 46px;
 }
 
 .side-menu-toggle {
@@ -684,6 +686,11 @@ p {
   .workspace-panel {
     padding-top: 0;
   }
+
+  .intro-panel,
+  .workspace-panel {
+    order: initial;
+  }
 }
 
 @media (max-width: 640px) {
@@ -771,7 +778,7 @@ html.desktop-liquid .desktop-titlebar-drag {
 html.desktop-liquid .app-shell {
   position: relative;
   z-index: 1;
-  grid-template-columns: minmax(242px, 300px) minmax(520px, 1fr);
+  grid-template-columns: minmax(520px, 1fr) minmax(242px, 300px);
   gap: 8px;
   width: 100%;
   max-width: none;
@@ -832,11 +839,11 @@ html.desktop-liquid .usage-card {
 
 html.desktop-liquid .workspace-panel {
   position: relative;
-  padding: 24px 22px 14px;
+  padding: 44px 22px 14px;
 }
 
 html.desktop-liquid .side-menu-toggle {
-  top: 22px;
+  top: 30px;
   right: 22px;
   width: 30px;
   height: 26px;
