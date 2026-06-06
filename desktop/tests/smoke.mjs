@@ -41,7 +41,6 @@ try {
     usageGuideFont: getComputedStyle(document.querySelector(".usage-guide")).fontFamily,
     usageListFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".usage-guide ol")).fontSize),
     usageBodyFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".usage-guide p")).fontSize),
-    introCopyFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".intro-copy")).fontSize),
     siteNoteFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".site-note p")).fontSize),
     siteNoteLinkFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".site-note a")).fontSize),
     autoBlankFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".auto-blank-notice")).fontSize),
@@ -85,9 +84,6 @@ try {
   if (desktopSummary.usageListFontSize < 12 || desktopSummary.usageBodyFontSize < 11.6) {
     throw new Error(`Expected the usage guide copy to be larger: ${JSON.stringify(desktopSummary)}`);
   }
-  if (desktopSummary.introCopyFontSize > 9.2) {
-    throw new Error(`Expected the intro copy to be slightly smaller: ${JSON.stringify(desktopSummary)}`);
-  }
   if (
     Math.abs(desktopSummary.siteNoteFontSize - desktopSummary.autoBlankFontSize) > 0.1
     || Math.abs(desktopSummary.siteNoteLinkFontSize - desktopSummary.autoBlankFontSize) > 0.1
@@ -122,6 +118,9 @@ try {
     isCollapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
     introVisible: Boolean(document.querySelector(".intro-panel")?.getClientRects().length),
     expanded: document.querySelector("[data-intro-toggle]")?.getAttribute("aria-expanded"),
+    introCopyFontSize: Number.parseFloat(getComputedStyle(document.querySelector(".intro-copy")).fontSize),
+    introCopyTextAlign: getComputedStyle(document.querySelector(".intro-copy")).textAlign,
+    introCopyTextAlignLast: getComputedStyle(document.querySelector(".intro-copy")).textAlignLast,
     usageCardFits: (() => {
       const card = document.querySelector(".usage-card");
       return card ? card.scrollHeight <= card.clientHeight + 1 : false;
@@ -141,6 +140,12 @@ try {
   if (!expandedSummary.usageCardFits) {
     throw new Error(`Expected the usage card content to fit inside the desktop window: ${JSON.stringify(expandedSummary)}`);
   }
+  if (expandedSummary.introCopyFontSize > 8.7) {
+    throw new Error(`Expected the intro copy to be smaller: ${JSON.stringify(expandedSummary)}`);
+  }
+  if (expandedSummary.introCopyTextAlign !== "left" || expandedSummary.introCopyTextAlignLast !== "left") {
+    throw new Error(`Expected intro copy to be left aligned: ${JSON.stringify(expandedSummary)}`);
+  }
   await introToggle.click();
   const collapsedSummary = await page.evaluate(() => ({
     isCollapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
@@ -153,6 +158,30 @@ try {
 
   try {
     await page.getByText("PDF 업로드").waitFor({ timeout: 10_000 });
+    const paperSelectLayout = await page.evaluate(() => {
+      const select = document.querySelector("[data-paper-size]");
+      if (!(select instanceof HTMLSelectElement)) {
+        return null;
+      }
+      const rect = select.getBoundingClientRect();
+      const textWidthProbe = document.createElement("span");
+      const styles = getComputedStyle(select);
+      textWidthProbe.textContent = "선택 안 함";
+      textWidthProbe.style.position = "absolute";
+      textWidthProbe.style.visibility = "hidden";
+      textWidthProbe.style.whiteSpace = "nowrap";
+      textWidthProbe.style.font = styles.font;
+      document.body.append(textWidthProbe);
+      const textWidth = textWidthProbe.getBoundingClientRect().width;
+      textWidthProbe.remove();
+      return {
+        width: rect.width,
+        textWidth,
+      };
+    });
+    if (!paperSelectLayout || paperSelectLayout.width < paperSelectLayout.textWidth + 28) {
+      throw new Error(`Expected the paper select to fit the default label: ${JSON.stringify(paperSelectLayout)}`);
+    }
     await page.setInputFiles("input[type=file]", fixturePath);
     await page.locator("[data-analysis]").waitFor({ timeout: 10_000 });
     await page.getByRole("button", { name: "소책자 만들기" }).click();

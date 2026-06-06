@@ -293,6 +293,22 @@ async function assertPaperControl(page) {
   if (!bindingBox || !selectBox || selectBox.y < bindingBox.y - 4 || selectBox.y > bindingBox.y + bindingBox.height + 4) {
     throw new Error("Expected the paper selector to sit beside the binding controls");
   }
+  const selectLabelWidth = await paperSelect.evaluate((select) => {
+    const textWidthProbe = document.createElement("span");
+    const styles = getComputedStyle(select);
+    textWidthProbe.textContent = "선택 안 함";
+    textWidthProbe.style.position = "absolute";
+    textWidthProbe.style.visibility = "hidden";
+    textWidthProbe.style.whiteSpace = "nowrap";
+    textWidthProbe.style.font = styles.font;
+    document.body.append(textWidthProbe);
+    const textWidth = textWidthProbe.getBoundingClientRect().width;
+    textWidthProbe.remove();
+    return textWidth;
+  });
+  if (selectBox.width < selectLabelWidth + 28) {
+    throw new Error(`Expected the paper selector to fit the default label, received ${selectBox.width}px for ${selectLabelWidth}px text`);
+  }
 
   await paperSelect.selectOption("custom");
   const customControls = page.locator("[data-paper-custom]");

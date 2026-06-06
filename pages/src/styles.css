@@ -115,6 +115,8 @@ a {
   font-family: var(--font-batang);
   font-size: 18px;
   line-height: 1.82;
+  text-align: left;
+  text-align-last: left;
   word-break: keep-all;
   overflow-wrap: normal;
   hyphens: none;
@@ -296,8 +298,8 @@ form {
 }
 
 .paper-size-select {
-  width: 72px;
-  padding-right: 2px;
+  width: 88px;
+  padding-right: 6px;
 }
 
 .paper-mm-input {
@@ -879,8 +881,10 @@ html.desktop-liquid .brand-drawing {
 html.desktop-liquid .intro-copy {
   margin-top: 12px;
   color: rgba(32, 35, 38, 0.78);
-  font-size: 9.05px;
-  line-height: 1.84;
+  font-size: 8.55px;
+  line-height: 1.9;
+  text-align: left;
+  text-align-last: left;
 }
 
 html.desktop-liquid .intro-copy p {
@@ -1092,7 +1096,7 @@ html.desktop-liquid .paper-mm-input {
 }
 
 html.desktop-liquid .paper-size-select {
-  width: 70px;
+  width: 84px;
 }
 
 html.desktop-liquid .paper-mm-input {
