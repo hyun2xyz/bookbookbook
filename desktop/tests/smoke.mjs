@@ -126,8 +126,8 @@ try {
     throw new Error("Expected a top menu item for checking updates");
   }
   const appVersion = await app.evaluate(({ app }) => app.getVersion());
-  if (appVersion !== "1.0.4") {
-    throw new Error(`Expected desktop app version 1.0.4, received ${appVersion}`);
+  if (appVersion !== "1.0.5") {
+    throw new Error(`Expected desktop app version 1.0.5, received ${appVersion}`);
   }
   const secondInstanceFocusResult = await app.evaluate(({ app, BrowserWindow }) => {
     const [window] = BrowserWindow.getAllWindows();

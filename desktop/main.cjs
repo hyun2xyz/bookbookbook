@@ -34,7 +34,6 @@ function createWindow() {
     backgroundColor: "#ffffff",
     title: "Bookbookbook",
     frame: false,
-    show: false,
     titleBarStyle: "hidden",
     trafficLightPosition: { x: 28, y: 24 },
     transparent: false,
@@ -78,6 +77,11 @@ function createWindow() {
   });
 
   window.loadFile(rendererIndex, { query: { shell: "desktop" } });
+  setTimeout(() => {
+    if (!window.isDestroyed()) {
+      focusWindow(window);
+    }
+  }, 1200);
   return window;
 }
 
