@@ -1,6 +1,6 @@
 ![Bookbookbook](assets/bookbookbook.png)
 
-[업데이트 노트 v1.0.5](docs/release-notes-1.0.5.md)
+[업데이트 노트 v1.0.6](docs/release-notes-1.0.6.md)
 
 Bookbookbook(북북북 쓰다듬기)는 PDF로 뽑은 파일을 중철 출력용 PDF로 바꿔주는 도구입니다.
 
@@ -36,11 +36,13 @@ Bookbookbook DMG는 현재 Apple Developer ID 서명과 notarization을 붙이�
 그래도 열기 경로:
 
 1. DMG를 엽니다.
-2. `Bookbookbook.app`을 `응용 프로그램` 폴더로 옮기지 말고, DMG 창 안에서 바로 우클릭합니다.
+2. DMG 창 안의 `Bookbookbook.app`을 우클릭합니다.
 3. `열기`를 선택합니다.
 4. macOS가 확인 창을 띄우면 다시 `열기`를 누릅니다.
 
 그래도 막히면 `시스템 설정` → `개인정보 보호 및 보안` → 아래쪽 `보안` 영역에서 `Bookbookbook` 항목의 `그래도 열기`를 누릅니다.
+
+참고: 현재 빌드는 Developer ID 서명과 notarization이 없는 ad-hoc 빌드입니다. macOS 버전에 따라 시스템 `/Applications` 폴더로 옮긴 앱이 실행되지 않을 수 있습니다. 이 경우 DMG 안에서 바로 열거나, 사용자 홈의 `~/Applications` 폴더에 복사해서 여세요. 인터넷 공개 배포에서 시스템 `/Applications` 설치를 안정적으로 지원하려면 Apple Developer ID 서명과 notarization이 필요합니다.
 
 ## 지원하는 PDF 형태
 
@@ -149,7 +151,7 @@ npm run dist
 생성 위치:
 
 ```text
-desktop/dist/Bookbookbook-1.0.5.dmg
+desktop/dist/Bookbookbook-1.0.6.dmg
 ```
 
 주의: 현재 DMG는 Developer ID 서명과 notarization이 없는 로컬 빌드입니다. 인터넷에 공개 배포하려면 Apple Developer ID 서명과 notarization을 추가해야 합니다.

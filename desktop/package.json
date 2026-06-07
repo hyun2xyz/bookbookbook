@@ -1,6 +1,6 @@
 {
   "name": "bookbookbook-desktop",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "description": "Local desktop wrapper for Bookbookbook.",
   "main": "main.cjs",
@@ -58,9 +58,15 @@
       },
       "contents": [
         {
-          "x": 270,
+          "x": 170,
           "y": 215,
           "type": "file"
+        },
+        {
+          "x": 370,
+          "y": 215,
+          "type": "link",
+          "path": "/Applications"
         }
       ]
     }
