@@ -60,6 +60,7 @@ try {
       fixturePath: readerFixturePath,
       outputPath: readerOutputPath,
       inputMode: "drop",
+      paperSize: "a3",
       expectedSummary: {
         "원본 PDF 페이지": 4,
         "분리 후 책 쪽수": 6,
@@ -88,7 +89,7 @@ try {
     await browser.close();
   }
 
-  await assertOutputPdf(readerOutputPath, 4, 840, 595);
+  await assertOutputPdf(readerOutputPath, 4, 1191, 842);
   await assertOutputPdf(allSpreadOutputPath, 2, 1191, 842);
 
   console.log("Smoke test passed: browser converted mixed and all-spread PDFs into valid booklet PDFs.");
@@ -126,7 +127,7 @@ async function createAllSpreadFixturePdf(path) {
   await writeFile(path, await source.save());
 }
 
-async function convertFixture(page, { fixturePath, outputPath, inputMode, expectedSummary, paperSize = "none" }) {
+async function convertFixture(page, { fixturePath, outputPath, inputMode, expectedSummary, paperSize = "a4" }) {
   if (inputMode === "drop") {
     await dropFixture(page, fixturePath);
   } else {
@@ -149,9 +150,7 @@ async function convertFixture(page, { fixturePath, outputPath, inputMode, expect
   await assertFileControlsFollowAnalysis(page);
   await assertPageNumberFollowsFileName(page);
 
-  if (paperSize !== "none") {
-    await page.locator("[data-paper-size]").selectOption(paperSize);
-  }
+  await page.locator("[data-paper-size]").selectOption(paperSize);
 
   const blankPlacementVisible = await page.locator("[data-blank-placement]").isVisible();
   if (expectedSummary["추가된 빈 페이지"] > 0 && !blankPlacementVisible) {
@@ -182,7 +181,7 @@ async function assertSmallPaperWarning(page) {
   await page.locator("[data-paper-height]").fill("100");
   await page.getByRole("button", { name: "소책자 만들기" }).click();
   await page.getByText("출력 용지가 작습니다. 판형을 키워주세요.").waitFor({ timeout: 10_000 });
-  await page.locator("[data-paper-size]").selectOption("none");
+  await page.locator("[data-paper-size]").selectOption("a4");
 }
 
 async function dropFixture(page, fixturePath) {
@@ -284,9 +283,12 @@ async function assertPaperControl(page) {
   const paperSelect = page.locator("[data-paper-size]");
   await paperSelect.waitFor({ timeout: 10_000 });
   const value = await paperSelect.inputValue();
-  if (value !== "none") {
-    throw new Error(`Expected default paper setting to be none, received ${value}`);
+  if (value !== "a4") {
+    throw new Error(`Expected default paper setting to be A4, received ${value}`);
   }
+  const optionsText = await paperSelect.evaluate((select) => Array.from(select.options).map((option) => option.textContent?.trim()).join(" "));
+  assertExcludes(optionsText, "선택 안 함");
+  assertIncludes(optionsText, "커스텀");
 
   const bindingBox = await page.locator(".binding-options").boundingBox();
   const selectBox = await paperSelect.boundingBox();
@@ -296,7 +298,7 @@ async function assertPaperControl(page) {
   const selectLabelWidth = await paperSelect.evaluate((select) => {
     const textWidthProbe = document.createElement("span");
     const styles = getComputedStyle(select);
-    textWidthProbe.textContent = "선택 안 함";
+    textWidthProbe.textContent = "커스텀";
     textWidthProbe.style.position = "absolute";
     textWidthProbe.style.visibility = "hidden";
     textWidthProbe.style.whiteSpace = "nowrap";
@@ -315,7 +317,7 @@ async function assertPaperControl(page) {
   if (!(await customControls.isVisible())) {
     throw new Error("Expected custom paper mm inputs to appear when custom paper is selected");
   }
-  await paperSelect.selectOption("none");
+  await paperSelect.selectOption("a4");
 }
 
 function assertNoPageErrors(errors) {

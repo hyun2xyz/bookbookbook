@@ -1221,5 +1221,24 @@ html.desktop-liquid form:has(.result:not([hidden])) .primary {
 
 html.desktop-liquid,
 html.desktop-liquid * {
-  cursor: url("./assets/puppy-13-cursor.webp") 32 32, auto;
+  --puppy-cursor: url("./assets/puppy-13-cursor.webp") 32 32, auto;
+  cursor: var(--puppy-cursor) !important;
+}
+
+html.desktop-liquid button,
+html.desktop-liquid a,
+html.desktop-liquid input,
+html.desktop-liquid select,
+html.desktop-liquid textarea,
+html.desktop-liquid label,
+html.desktop-liquid canvas,
+html.desktop-liquid [role="button"],
+html.desktop-liquid .desktop-titlebar-drag,
+html.desktop-liquid .side-menu-toggle,
+html.desktop-liquid .side-menu-toggle *,
+html.desktop-liquid .preview-frame,
+html.desktop-liquid .drop-zone,
+html.desktop-liquid .primary,
+html.desktop-liquid .download {
+  cursor: var(--puppy-cursor) !important;
 }

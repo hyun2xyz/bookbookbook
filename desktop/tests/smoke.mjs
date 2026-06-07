@@ -64,6 +64,9 @@ try {
     scrollHeight: document.documentElement.scrollHeight,
     primaryWidth: Math.round(document.querySelector("[data-submit]")?.getBoundingClientRect().width ?? 0),
     appCursor: getComputedStyle(document.body).cursor,
+    menuCursor: getComputedStyle(document.querySelector("[data-intro-toggle]")).cursor,
+    selectCursor: getComputedStyle(document.querySelector("[data-paper-size]")).cursor,
+    titlebarCursor: getComputedStyle(document.querySelector(".desktop-titlebar-drag")).cursor,
   }));
   if (!desktopSummary.hasLetterCard || !desktopSummary.hasUsageCard) {
     throw new Error("Expected the desktop intro area to be split into letter and usage cards");
@@ -107,7 +110,10 @@ try {
   if (desktopSummary.primaryWidth > 270) {
     throw new Error(`Expected the booklet button to keep compact horizontal margins: ${JSON.stringify(desktopSummary)}`);
   }
-  if (!desktopSummary.appCursor.includes("data:image/webp") || !desktopSummary.appCursor.includes("32 32")) {
+  if (
+    ![desktopSummary.appCursor, desktopSummary.menuCursor, desktopSummary.selectCursor, desktopSummary.titlebarCursor]
+      .every((cursorValue) => cursorValue.includes("data:image/webp") && cursorValue.includes("32 32"))
+  ) {
     throw new Error(`Expected the desktop app to use the puppy cursor: ${JSON.stringify(desktopSummary)}`);
   }
   if (desktopSummary.scrollHeight > desktopSummary.height + 1) {
@@ -174,7 +180,7 @@ try {
       const rect = select.getBoundingClientRect();
       const textWidthProbe = document.createElement("span");
       const styles = getComputedStyle(select);
-      textWidthProbe.textContent = "선택 안 함";
+      textWidthProbe.textContent = "커스텀";
       textWidthProbe.style.position = "absolute";
       textWidthProbe.style.visibility = "hidden";
       textWidthProbe.style.whiteSpace = "nowrap";
@@ -183,13 +189,22 @@ try {
       const textWidth = textWidthProbe.getBoundingClientRect().width;
       textWidthProbe.remove();
       return {
+        value: select.value,
+        optionsText: Array.from(select.options).map((option) => option.textContent?.trim()).join(" "),
         width: rect.width,
         textWidth,
       };
     });
-    if (!paperSelectLayout || paperSelectLayout.width < paperSelectLayout.textWidth + 28) {
-      throw new Error(`Expected the paper select to fit the default label: ${JSON.stringify(paperSelectLayout)}`);
+    if (
+      !paperSelectLayout
+      || paperSelectLayout.value !== "a4"
+      || paperSelectLayout.optionsText.includes("선택 안 함")
+      || !paperSelectLayout.optionsText.includes("커스텀")
+      || paperSelectLayout.width < paperSelectLayout.textWidth + 28
+    ) {
+      throw new Error(`Expected the paper select to default to A4 and fit the custom label: ${JSON.stringify(paperSelectLayout)}`);
     }
+    await page.locator("[data-paper-size]").selectOption("a3");
     await page.setInputFiles("input[type=file]", fixturePath);
     await page.locator("[data-analysis]").waitFor({ timeout: 10_000 });
     await page.getByRole("button", { name: "소책자 만들기" }).click();

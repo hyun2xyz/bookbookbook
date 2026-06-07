@@ -362,7 +362,7 @@ function parseBlankPlacement(formData: FormData): BlankPlacement {
 }
 
 function parseTrimMarks(formData: FormData): TrimMarkOptions | undefined {
-  const paperSize = String(formData.get("paperSize") ?? "none");
+  const paperSize = String(formData.get("paperSize") ?? "a4");
 
   if (paperSize === "none") {
     return undefined;
