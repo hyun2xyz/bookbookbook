@@ -28,6 +28,22 @@ https://hyun2xyz.github.io/bookbookbook/
 
 설치도 필요 없습니다. 열린 뒤 PDF 변환은 브라우저 안에서 진행됩니다.
 
+## macOS에서 앱이 막힐 때
+
+Bookbookbook DMG는 현재 Apple Developer ID 서명과 notarization을 붙이기 전의 로컬 빌드라서, macOS가 처음 실행을 막을 수 있습니다.
+이건 바이러스가 발견됐다는 뜻이 아니라, Apple이 공증한 앱이 아니라는 보안 안내입니다.
+
+그래도 열기 경로:
+
+1. `Bookbookbook.app`을 한 번 실행합니다.
+2. macOS가 열 수 없다고 하면 창을 닫습니다.
+3. `시스템 설정`을 엽니다.
+4. `개인정보 보호 및 보안`으로 갑니다.
+5. 아래쪽 `보안` 영역에서 `Bookbookbook` 항목의 `그래도 열기`를 누릅니다.
+6. 다시 확인 창이 뜨면 `열기`를 누릅니다.
+
+또는 Finder에서 `Bookbookbook.app`을 우클릭한 뒤 `열기`를 선택해도 됩니다.
+
 ## 지원하는 PDF 형태
 
 대부분의 PDF의 형태를 지원하고요
