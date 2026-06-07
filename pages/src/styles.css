@@ -1150,8 +1150,9 @@ html.desktop-liquid .download {
 }
 
 html.desktop-liquid .primary {
-  width: 100%;
+  width: min(100%, 260px);
   min-width: 0;
+  justify-self: end;
 }
 
 html.desktop-liquid .primary span,

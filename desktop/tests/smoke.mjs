@@ -62,6 +62,7 @@ try {
     width: window.outerWidth,
     height: window.outerHeight,
     scrollHeight: document.documentElement.scrollHeight,
+    primaryWidth: Math.round(document.querySelector("[data-submit]")?.getBoundingClientRect().width ?? 0),
   }));
   if (!desktopSummary.hasLetterCard || !desktopSummary.hasUsageCard) {
     throw new Error("Expected the desktop intro area to be split into letter and usage cards");
@@ -101,6 +102,9 @@ try {
   }
   if (desktopSummary.width > 1680 || desktopSummary.height > 1060) {
     throw new Error(`Expected initial desktop window to stay within the desktop layout cap, received ${desktopSummary.width}x${desktopSummary.height}`);
+  }
+  if (desktopSummary.primaryWidth > 270) {
+    throw new Error(`Expected the booklet button to keep compact horizontal margins: ${JSON.stringify(desktopSummary)}`);
   }
   if (desktopSummary.scrollHeight > desktopSummary.height + 1) {
     throw new Error(`Expected initial desktop window content to fit without vertical scrolling, received content height ${desktopSummary.scrollHeight} in ${desktopSummary.height}`);
