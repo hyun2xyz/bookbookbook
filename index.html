@@ -6,47 +6,63 @@
     <link rel="icon" type="image/png" href="./파비.png">
     <link rel="apple-touch-icon" href="./파비.png">
     <title>Bookbookbook</title>
-    <script type="module" crossorigin src="./assets/index-4bfbd4f6.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-ec635ff7.css">
+    <script>
+      if (new URLSearchParams(window.location.search).get("shell") === "desktop") {
+        document.documentElement.classList.add("desktop-liquid");
+      }
+    </script>
+    <script type="module" crossorigin src="./assets/index-6f7b64fb.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-9a16a702.css">
   </head>
   <body>
-    <main class="app-shell">
-      <aside class="intro-panel">
-        <div class="masthead">
-          <div class="brand-mark">
-            <img class="brand-drawing" src="./bookbookbook.png" alt="책 위에 book book book 글자와 강아지가 그려진 Bookbookbook 그림">
+    <div class="desktop-titlebar-drag" aria-hidden="true"></div>
+    <main class="app-shell is-intro-collapsed">
+      <aside class="intro-panel" id="intro-panel">
+        <section class="letter-card" aria-label="Bookbookbook 편지">
+          <div class="masthead">
+            <div class="brand-mark">
+              <img class="brand-drawing" src="./bookbookbook-drawing.png" alt="책 위에 book book book 글자와 강아지가 그려진 Bookbookbook 그림">
+            </div>
           </div>
-        </div>
 
-        <section class="intro-copy" aria-label="Bookbookbook 소개">
-          <p>안녕하세요, <span class="intro-link">북북북(BookBookBook)</span>은 PDF를 중철제본이 가능한 소책자 PDF로 만드는 웹 사이트인데요, 제가 인디자인이나 아크로벳 에서 중철 인쇄용 PDF로 변환 하다가 화딱지가 나서 갑작스레 만들었습니다.</p>
-          <p>디자이너라면 다들 겪으시는거죠? 바보통이 와서 저만 이런 게 아니였으면 좋겠습니다.. .</p>
+          <section class="intro-copy" aria-label="Bookbookbook 소개">
+            <p>안녕하세요, <span class="intro-link">북북북(BookBookBook)</span>은 PDF를 중철제본이 가능한 소책자 PDF로 만드는 웹/앱 인데요, 제가 인디자인이나 아크로벳 에서 중철 인쇄용 PDF로 변환 하다가 화딱지가 나서 갑작스레 만들었습니다.</p>
+            <p>디자이너라면 다들 겪으시는거죠? 바보통이 와서 저만 이런 게 아니였으면 좋겠습니다.. .</p>
+          </section>
+
+          <section class="site-note" aria-label="사이트 정보">
+            <p>2026년 5월 25일 마지막으로 업데이트 됨.</p>
+            <a href="https://www.instagram.com/hyun2xyz/" target="_blank" rel="noopener noreferrer">@hyun2xyz</a>
+          </section>
         </section>
 
-        <section class="site-note" aria-label="사이트 정보">
-          <p>2026년 5월 25일 마지막으로 업데이트 됨.</p>
-          <a href="https://www.instagram.com/hyun2xyz/" target="_blank" rel="noopener noreferrer">@hyun2xyz</a>
+        <section class="usage-card" aria-label="Bookbookbook 사용설명서">
+          <section class="usage-guide" aria-labelledby="usage-guide-title">
+            <h2 id="usage-guide-title">사용설명서</h2>
+            <ol>
+              <li><span class="usage-number" aria-hidden="true">❶</span><span>PDF를 선택합니다.</span></li>
+              <li><span class="usage-number" aria-hidden="true">❷</span><span>책장이 넘어가는 방향에 맞춰<br>좌철 또는 우철을 고릅니다.</span></li>
+              <li><span class="usage-number" aria-hidden="true">❸</span><span>소책자 만들기를 누릅니다.</span></li>
+              <li><span class="usage-number" aria-hidden="true">❹</span><span>저장하기 ᖜ ◟ᖜ</span></li>
+            </ol>
+            <h3>지원하는 PDF 형태</h3>
+            <p>낱장 페이지 단위 PDF여도, 스프레드 PDF여도 괜찮습니다.<br>단! 재단선 도련선을 끄고 PDF 로 출력후에 북북북으로 변환하세요.<br>북북북이 형태를 자동으로 판단해서<br>중철 인쇄 순서로 다시 배치합니다. ദ്ദി ' ᵕ ' )</p>
+            <p>PDF는 서버로 업로드되지 않고, 브라우저 안에서만 처리됩니다.</p>
+          </section>
+          <p class="auto-blank-notice">중철 소책자는 전체 쪽수가 4의 배수여야 해서, 쪽수가 부족하면 뒤표지 앞에 빈 페이지가 자동으로 추가됩니다.</p>
         </section>
-
-        <section class="usage-guide" aria-labelledby="usage-guide-title">
-          <h2 id="usage-guide-title">사용설명서</h2>
-          <ol>
-            <li><span class="usage-number" aria-hidden="true">❶</span><span>PDF를 선택합니다.</span></li>
-            <li><span class="usage-number" aria-hidden="true">❷</span><span>책장이 넘어가는 방향에 맞춰<br>좌철 또는 우철을 고릅니다.</span></li>
-            <li><span class="usage-number" aria-hidden="true">❸</span><span>소책자 만들기를 누릅니다.</span></li>
-            <li><span class="usage-number" aria-hidden="true">❹</span><span>저장하기 ᖜ ◟ᖜ</span></li>
-          </ol>
-          <h3>지원하는 PDF 형태</h3>
-          <p>낱장 페이지 단위 PDF여도, 스프레드 PDF여도 괜찮습니다.<br>북북북이 형태를 자동으로 판단해서<br>중철 인쇄 순서로 다시 배치합니다. ദ്ദി ' ᵕ ' )</p>
-          <p>PDF는 서버로 업로드되지 않고, 브라우저 안에서만 처리됩니다.</p>
-        </section>
-        <p class="auto-blank-notice">중철 소책자는 전체 쪽수가 4의 배수여야 해서, 쪽수가 부족하면 뒤표지 앞에 빈 페이지가 자동으로 추가됩니다.</p>
       </aside>
 
       <section class="workspace-panel">
+        <button class="side-menu-toggle" type="button" data-intro-toggle aria-controls="intro-panel" aria-expanded="false" aria-label="소개와 사용설명서 펼치기">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </button>
+
         <form data-form>
           <div class="preview-title">
-            <h2>PDF PREVIEW</h2>
+            <h2>BOOK BOOK BOOK</h2>
           </div>
 
           <input data-file type="file" name="pdf" accept="application/pdf,.pdf" hidden>
@@ -102,6 +118,27 @@
                   <input type="radio" name="binding" value="right">
                   우철
                 </label>
+                <label class="paper-control">
+                  <span>출력 용지</span>
+                  <select class="paper-size-select" data-paper-size name="paperSize" aria-label="출력 용지">
+                    <option value="a4" selected>A4</option>
+                    <option value="a3">A3</option>
+                    <option value="b5">B5</option>
+                    <option value="b4">B4</option>
+                    <option value="sra4">SRA4</option>
+                    <option value="sra3">SRA3</option>
+                    <option value="letter">Letter</option>
+                    <option value="tabloid">Tabloid</option>
+                    <option value="custom">커스텀</option>
+                  </select>
+                </label>
+                <label class="paper-custom" data-paper-custom hidden>
+                  <input class="paper-mm-input" data-paper-width type="number" name="paperWidthMm" min="20" max="2000" step="0.1" value="450" inputmode="decimal" aria-label="커스텀 출력 용지 가로 mm">
+                  <span>×</span>
+                  <input class="paper-mm-input" data-paper-height type="number" name="paperHeightMm" min="20" max="2000" step="0.1" value="640" inputmode="decimal" aria-label="커스텀 출력 용지 세로 mm">
+                  <span>mm</span>
+                </label>
+                <button class="reset-button" type="button" data-reset title="초기화" aria-label="초기화">↻</button>
               </fieldset>
               <div class="file-meta">
                 <p class="selected-file" data-preview-name>선택된 PDF가 없습니다.</p>
