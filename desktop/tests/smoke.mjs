@@ -66,6 +66,8 @@ try {
     hasCursorOverlayMode: document.documentElement.classList.contains("has-puppy-cursor-overlay"),
     hasCursorOverlay: Boolean(document.querySelector(".puppy-cursor-overlay")),
     cursorOverlayBackground: getComputedStyle(document.querySelector(".puppy-cursor-overlay")).backgroundImage,
+    cursorOverlayWidth: Math.round(document.querySelector(".puppy-cursor-overlay")?.getBoundingClientRect().width ?? 0),
+    cursorOverlayHeight: Math.round(document.querySelector(".puppy-cursor-overlay")?.getBoundingClientRect().height ?? 0),
     appCursor: getComputedStyle(document.body).cursor,
     menuCursor: getComputedStyle(document.querySelector("[data-intro-toggle]")).cursor,
     selectCursor: getComputedStyle(document.querySelector("[data-paper-size]")).cursor,
@@ -118,6 +120,9 @@ try {
   }
   if (!desktopSummary.cursorOverlayBackground.includes("cdn.cursors-4u.net/previews/puppy-13-a9c1ade9-32.webp")) {
     throw new Error(`Expected the cursor overlay to use the puppy cursor image: ${JSON.stringify(desktopSummary)}`);
+  }
+  if (desktopSummary.cursorOverlayWidth !== 48 || desktopSummary.cursorOverlayHeight !== 48) {
+    throw new Error(`Expected the puppy cursor overlay to keep the restored cursor size: ${JSON.stringify(desktopSummary)}`);
   }
   if (
     ![desktopSummary.appCursor, desktopSummary.menuCursor, desktopSummary.selectCursor, desktopSummary.titlebarCursor]

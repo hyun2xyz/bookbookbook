@@ -41,6 +41,8 @@ const PAPER_SIZES_MM = {
   tabloid: { width: 279, height: 432 },
 } as const;
 
+const DESKTOP_CURSOR_HOTSPOT_PX = 48;
+
 type PaperSize = keyof typeof PAPER_SIZES_MM;
 
 let previewRequestId = 0;
@@ -451,7 +453,7 @@ function setupDesktopCursorOverlay(): void {
   document.documentElement.classList.add("has-puppy-cursor-overlay");
 
   const moveCursor = (event: MouseEvent): void => {
-    cursorOverlay.style.transform = `translate(${event.clientX - 32}px, ${event.clientY - 32}px)`;
+    cursorOverlay.style.transform = `translate(${event.clientX - DESKTOP_CURSOR_HOTSPOT_PX}px, ${event.clientY - DESKTOP_CURSOR_HOTSPOT_PX}px)`;
     cursorOverlay.hidden = false;
   };
 
