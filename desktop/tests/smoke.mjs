@@ -63,9 +63,6 @@ try {
     height: window.outerHeight,
     scrollHeight: document.documentElement.scrollHeight,
     primaryWidth: Math.round(document.querySelector("[data-submit]")?.getBoundingClientRect().width ?? 0),
-    hasCursorOverlayMode: document.documentElement.classList.contains("has-puppy-cursor-overlay"),
-    hasCursorOverlay: Boolean(document.querySelector(".puppy-cursor-overlay")),
-    cursorOverlayBackground: getComputedStyle(document.querySelector(".puppy-cursor-overlay")).backgroundImage,
     appCursor: getComputedStyle(document.body).cursor,
     menuCursor: getComputedStyle(document.querySelector("[data-intro-toggle]")).cursor,
     selectCursor: getComputedStyle(document.querySelector("[data-paper-size]")).cursor,
@@ -113,24 +110,11 @@ try {
   if (desktopSummary.primaryWidth > 270) {
     throw new Error(`Expected the booklet button to keep compact horizontal margins: ${JSON.stringify(desktopSummary)}`);
   }
-  if (!desktopSummary.hasCursorOverlayMode || !desktopSummary.hasCursorOverlay) {
-    throw new Error(`Expected the desktop app to enable the puppy cursor overlay: ${JSON.stringify(desktopSummary)}`);
-  }
-  if (!desktopSummary.cursorOverlayBackground.includes("cdn.cursors-4u.net/previews/puppy-13-a9c1ade9-32.webp")) {
-    throw new Error(`Expected the cursor overlay to use the puppy cursor image: ${JSON.stringify(desktopSummary)}`);
-  }
   if (
     ![desktopSummary.appCursor, desktopSummary.menuCursor, desktopSummary.selectCursor, desktopSummary.titlebarCursor]
-      .every((cursorValue) => cursorValue === "none")
+      .every((cursorValue) => cursorValue.includes("cdn.cursors-4u.net/previews/puppy-13-a9c1ade9-32.webp") && cursorValue.includes("32 32"))
   ) {
-    throw new Error(`Expected the native cursor to be hidden behind the puppy cursor overlay: ${JSON.stringify(desktopSummary)}`);
-  }
-  await page.mouse.move(320, 240);
-  await page.mouse.down();
-  const cursorPressed = await page.locator(".puppy-cursor-overlay").evaluate((element) => element.classList.contains("is-pressed"));
-  await page.mouse.up();
-  if (!cursorPressed) {
-    throw new Error("Expected the puppy cursor overlay to show a pressed state while clicking");
+    throw new Error(`Expected the desktop app to use the puppy cursor: ${JSON.stringify(desktopSummary)}`);
   }
   if (desktopSummary.scrollHeight > desktopSummary.height + 1) {
     throw new Error(`Expected initial desktop window content to fit without vertical scrolling, received content height ${desktopSummary.scrollHeight} in ${desktopSummary.height}`);
