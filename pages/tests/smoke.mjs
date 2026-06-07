@@ -67,6 +67,7 @@ try {
     assertIncludes(openedText, "PDF를 중철제본이 가능한 소책자 PDF로 만드는");
     assertIncludes(openedText, "단! 재단선 도련선을 끄고 PDF 로 출력후에 북북북으로 변환하세요.");
     await assertPaperControl(page);
+    await assertPagesButtonStyle(page);
     await convertFixture(page, {
       fixturePath: readerFixturePath,
       outputPath: readerOutputPath,
@@ -179,6 +180,7 @@ async function convertFixture(page, { fixturePath, outputPath, inputMode, expect
   Object.entries(expectedSummary).forEach(([label, value]) => {
     assertIncludes(summary, `${label} ${value}`);
   });
+  await assertDownloadButtonStyle(page);
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -365,6 +367,72 @@ async function assertPaperControl(page) {
     throw new Error("Expected custom paper mm inputs to appear when custom paper is selected");
   }
   await paperSelect.selectOption("a4");
+}
+
+async function assertPagesButtonStyle(page) {
+  const style = await page.evaluate(() => {
+    const getNumber = (value) => Number.parseFloat(value) || 0;
+    const binding = document.querySelector(".binding-options");
+    const primary = document.querySelector(".primary");
+    const reset = document.querySelector("[data-reset]");
+    const bindingRect = binding.getBoundingClientRect();
+    const primaryRect = primary.getBoundingClientRect();
+    const resetRect = reset.getBoundingClientRect();
+    const bindingStyle = getComputedStyle(binding);
+    const primaryStyle = getComputedStyle(primary);
+    const resetStyle = getComputedStyle(reset);
+    return {
+      bindingRadius: getNumber(bindingStyle.borderRadius),
+      bindingBorder: bindingStyle.borderTopWidth,
+      bindingBackground: bindingStyle.backgroundColor,
+      primaryRadius: getNumber(primaryStyle.borderRadius),
+      primaryBackground: primaryStyle.backgroundColor,
+      primaryWidth: primaryRect.width,
+      primaryX: primaryRect.x,
+      bindingX: bindingRect.x,
+      resetRound: Math.abs(resetRect.width - resetRect.height),
+      resetRadius: getNumber(resetStyle.borderRadius),
+    };
+  });
+
+  if (
+    style.bindingRadius < 20
+    || style.bindingBorder === "0px"
+    || !style.bindingBackground.includes("255, 255, 255")
+    || style.primaryRadius < 20
+    || !style.primaryBackground.includes("255, 255, 255")
+    || style.primaryWidth > 460
+    || style.primaryX <= style.bindingX
+    || style.resetRound > 1
+    || style.resetRadius < 12
+  ) {
+    throw new Error(`Expected Pages controls to use rounded white pill buttons: ${JSON.stringify(style)}`);
+  }
+}
+
+async function assertDownloadButtonStyle(page) {
+  const style = await page.evaluate(() => {
+    const download = document.querySelector(".download");
+    const rect = download.getBoundingClientRect();
+    const computed = getComputedStyle(download);
+    return {
+      radius: Number.parseFloat(computed.borderRadius) || 0,
+      background: computed.backgroundColor,
+      boxShadow: computed.boxShadow,
+      borderBottom: computed.borderBottomWidth,
+      width: rect.width,
+    };
+  });
+
+  if (
+    style.radius < 20
+    || !style.background.includes("255, 255, 255")
+    || style.boxShadow !== "none"
+    || style.borderBottom === "0px"
+    || style.width < 500
+  ) {
+    throw new Error(`Expected the download button to be a white rounded outline without a green underline: ${JSON.stringify(style)}`);
+  }
 }
 
 function assertNoPageErrors(errors) {

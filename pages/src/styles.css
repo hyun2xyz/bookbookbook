@@ -222,7 +222,7 @@ form {
 
 .file-controls {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-items: start;
   justify-items: start;
 }
@@ -239,14 +239,16 @@ form {
 .binding-options {
   display: inline-flex;
   flex: 0 0 auto;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px 14px;
+  gap: 4px;
   width: auto;
+  max-width: 100%;
   height: auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  padding: 4px;
+  border: 1px solid rgba(32, 35, 38, 0.13);
+  border-radius: 999px;
+  background: #ffffff;
 }
 
 .binding-options legend,
@@ -278,20 +280,30 @@ form {
   font-size: 13px;
 }
 
+.binding-options label {
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
 .paper-control,
 .paper-custom {
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
+}
+
+.binding-options .paper-control,
+.binding-options .paper-custom {
+  padding: 5px 8px;
 }
 
 .paper-size-select,
 .paper-mm-input,
 .reset-button {
   min-width: 0;
-  height: 24px;
-  padding: 2px 5px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  height: 28px;
+  padding: 3px 9px;
+  border: 1px solid rgba(32, 35, 38, 0.14);
+  border-radius: 999px;
   background: #ffffff;
   color: var(--ink);
   font: inherit;
@@ -310,7 +322,7 @@ form {
 }
 
 .paper-size-select {
-  width: 88px;
+  width: 104px;
   padding-right: 6px;
 }
 
@@ -352,6 +364,10 @@ form {
 .blank-placement input[type="radio"]:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
+}
+
+.binding-options label:has(input[type="radio"]:checked) {
+  background: rgba(201, 246, 220, 0.42);
 }
 
 .drop-zone {
@@ -487,7 +503,7 @@ p {
 
 .preview-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 32%);
   gap: 24px;
   align-items: start;
 }
@@ -577,35 +593,37 @@ p {
 .download {
   display: inline-flex;
   width: 100%;
-  min-height: 52px;
+  min-height: 56px;
   align-items: center;
   justify-content: center;
-  border: 0;
-  border-radius: 0;
-  background: #000;
-  color: white;
+  border: 1px solid rgba(32, 35, 38, 0.13);
+  border-radius: 999px;
+  background: #ffffff;
+  color: rgba(20, 23, 26, 0.94);
   font-size: 16px;
-  font-weight: var(--font-bold);
+  font-weight: var(--font-light);
   text-decoration: none;
+  box-shadow: none;
   cursor: pointer;
 }
 
 .download:hover {
-  background: #2d2d2d;
+  border-color: rgba(135, 145, 153, 0.34);
+  background: #ffffff;
 }
 
 .primary {
   display: inline-flex;
   justify-self: end;
-  width: auto;
-  min-width: 220px;
-  min-height: 46px;
+  width: min(100%, 430px);
+  min-width: 0;
+  min-height: 56px;
   align-items: center;
   justify-content: center;
   padding: 10px 20px;
-  border: 1px dashed var(--line);
-  border-radius: 0;
-  background: transparent;
+  border: 1px solid rgba(32, 35, 38, 0.13);
+  border-radius: 999px;
+  background: #ffffff;
   color: var(--ink);
   font-family: var(--font-main);
   font-size: 16px;
@@ -618,8 +636,8 @@ p {
 }
 
 .primary:hover {
-  border-color: #8d8d8d;
-  background: transparent;
+  border-color: rgba(135, 145, 153, 0.34);
+  background: #ffffff;
 }
 
 .primary:disabled {
