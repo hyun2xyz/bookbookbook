@@ -1259,8 +1259,8 @@ html.desktop-liquid .puppy-cursor-overlay {
   top: 0;
   left: 0;
   z-index: 2147483647;
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
   background-image: var(--puppy-cursor-image);
   background-repeat: no-repeat;
   background-size: contain;
@@ -1272,12 +1272,12 @@ html.desktop-liquid .puppy-cursor-overlay {
 html.desktop-liquid .puppy-cursor-overlay::before {
   content: "";
   position: absolute;
-  top: 3px;
+  top: 2px;
   left: 0;
-  width: 26px;
-  height: 38px;
+  width: 17px;
+  height: 25px;
   background: #111111;
-  clip-path: polygon(0 0, 88% 44%, 53% 52%, 88% 96%, 59% 100%, 24% 60%, 0 72%);
+  clip-path: polygon(0 0, 15px 11px, 9px 13px, 15px 24px, 10px 25px, 4px 15px, 0 18px);
   opacity: 0;
 }
 
