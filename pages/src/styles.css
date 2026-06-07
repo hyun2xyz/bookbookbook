@@ -1218,3 +1218,8 @@ html.desktop-liquid form:has(.result:not([hidden])) .primary {
     margin-top: 20px;
   }
 }
+
+html.desktop-liquid,
+html.desktop-liquid * {
+  cursor: url("./assets/puppy-13-cursor.webp") 32 32, auto;
+}
