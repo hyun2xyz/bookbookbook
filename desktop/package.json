@@ -11,6 +11,7 @@
     "set:dmg-icon": "node scripts/set-dmg-icon.mjs",
     "pack": "npm run build:renderer && npm run build:icon && npm run build:dmg-background && electron-builder --mac dir",
     "dist": "npm run build:renderer && npm run build:icon && npm run build:dmg-background && electron-builder --mac dmg && npm run set:dmg-icon",
+    "dist:win": "npm run build:renderer && electron-builder --win nsis --x64 --publish never",
     "smoke": "npm run build:renderer && node tests/smoke.mjs",
     "start": "npm run build:renderer && electron ."
   },
