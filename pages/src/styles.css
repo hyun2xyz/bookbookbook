@@ -1239,8 +1239,8 @@ html.desktop-liquid form:has(.result:not([hidden])) .primary {
   }
 }
 
-html.desktop-liquid,
-html.desktop-liquid * {
+html,
+html * {
   /* Puppy 13 cursor from Cursors-4U:
      https://www.cursors-4u.com/cursor/puppy-13
      Creator listed as Wackypixel Co.; license shown as unknown. */
@@ -1248,21 +1248,21 @@ html.desktop-liquid * {
   cursor: var(--puppy-cursor) !important;
 }
 
-html.desktop-liquid button,
-html.desktop-liquid a,
-html.desktop-liquid input,
-html.desktop-liquid select,
-html.desktop-liquid textarea,
-html.desktop-liquid label,
-html.desktop-liquid canvas,
-html.desktop-liquid [role="button"],
-html.desktop-liquid .desktop-titlebar-drag,
-html.desktop-liquid .side-menu-toggle,
-html.desktop-liquid .side-menu-toggle *,
-html.desktop-liquid .preview-frame,
-html.desktop-liquid .drop-zone,
-html.desktop-liquid .primary,
-html.desktop-liquid .download,
-html.desktop-liquid .reset-button {
+button,
+a,
+input,
+select,
+textarea,
+label,
+canvas,
+[role="button"],
+.desktop-titlebar-drag,
+.side-menu-toggle,
+.side-menu-toggle *,
+.preview-frame,
+.drop-zone,
+.primary,
+.download,
+.reset-button {
   cursor: var(--puppy-cursor) !important;
 }

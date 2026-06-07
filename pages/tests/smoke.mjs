@@ -43,6 +43,17 @@ try {
     assertIncludes(visibleText, "BOOK BOOK BOOK");
     assertIncludes(visibleText, "PDF 업로드");
     assertIncludes(visibleText, "드래그 엔 드롭 가능");
+    const pageCursorSummary = await page.evaluate(() => ({
+      bodyCursor: getComputedStyle(document.body).cursor,
+      menuCursor: getComputedStyle(document.querySelector("[data-intro-toggle]")).cursor,
+      selectCursor: getComputedStyle(document.querySelector("[data-paper-size]")).cursor,
+    }));
+    if (
+      ![pageCursorSummary.bodyCursor, pageCursorSummary.menuCursor, pageCursorSummary.selectCursor]
+        .every((cursorValue) => cursorValue.includes("cdn.cursors-4u.net/previews/puppy-13-a9c1ade9-32.webp") && cursorValue.includes("32 32"))
+    ) {
+      throw new Error(`Expected GitHub Pages to use the puppy cursor: ${JSON.stringify(pageCursorSummary)}`);
+    }
     const defaultIntroState = await page.evaluate(() => ({
       collapsed: document.querySelector(".app-shell")?.classList.contains("is-intro-collapsed"),
       introVisible: Boolean(document.querySelector(".intro-panel")?.getClientRects().length),
