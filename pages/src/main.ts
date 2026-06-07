@@ -50,6 +50,8 @@ let previewState: { document: PreviewDocument; currentPage: number } | null = nu
 let selectedPdfBytes: Uint8Array | null = null;
 let downloadUrl: string | null = null;
 
+setupDesktopCursorOverlay();
+
 introToggle.addEventListener("click", () => {
   const isCollapsed = appShell.classList.toggle("is-intro-collapsed");
   introToggle.setAttribute("aria-expanded", String(!isCollapsed));
@@ -435,6 +437,38 @@ function revokeDownloadUrl(): void {
     URL.revokeObjectURL(downloadUrl);
     downloadUrl = null;
   }
+}
+
+function setupDesktopCursorOverlay(): void {
+  if (!document.documentElement.classList.contains("desktop-liquid")) {
+    return;
+  }
+
+  const cursorOverlay = document.createElement("div");
+  cursorOverlay.className = "puppy-cursor-overlay";
+  cursorOverlay.setAttribute("aria-hidden", "true");
+  document.body.append(cursorOverlay);
+  document.documentElement.classList.add("has-puppy-cursor-overlay");
+
+  const moveCursor = (event: MouseEvent): void => {
+    cursorOverlay.style.transform = `translate(${event.clientX - 32}px, ${event.clientY - 32}px)`;
+    cursorOverlay.hidden = false;
+  };
+
+  const releaseCursor = (): void => {
+    cursorOverlay.classList.remove("is-pressed");
+  };
+
+  window.addEventListener("mousemove", moveCursor);
+  window.addEventListener("mousedown", () => {
+    cursorOverlay.classList.add("is-pressed");
+  });
+  window.addEventListener("mouseup", releaseCursor);
+  window.addEventListener("mouseleave", () => {
+    cursorOverlay.hidden = true;
+    releaseCursor();
+  });
+  window.addEventListener("blur", releaseCursor);
 }
 
 function getElement<T extends Element>(selector: string): T {

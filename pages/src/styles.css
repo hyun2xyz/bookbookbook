@@ -1245,7 +1245,44 @@ html.desktop-liquid * {
      https://www.cursors-4u.com/cursor/puppy-13
      Creator listed as Wackypixel Co.; license shown as unknown. */
   --puppy-cursor: url("https://cdn.cursors-4u.net/previews/puppy-13-a9c1ade9-32.webp") 32 32, auto;
+  --puppy-cursor-image: url("https://cdn.cursors-4u.net/previews/puppy-13-a9c1ade9-32.webp");
   cursor: var(--puppy-cursor) !important;
+}
+
+html.desktop-liquid.has-puppy-cursor-overlay,
+html.desktop-liquid.has-puppy-cursor-overlay * {
+  cursor: none !important;
+}
+
+html.desktop-liquid .puppy-cursor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483647;
+  width: 32px;
+  height: 32px;
+  background-image: var(--puppy-cursor-image);
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  transform: translate(-999px, -999px);
+  will-change: transform;
+}
+
+html.desktop-liquid .puppy-cursor-overlay::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 0;
+  width: 17px;
+  height: 25px;
+  background: #111111;
+  clip-path: polygon(0 0, 15px 11px, 9px 13px, 15px 24px, 10px 25px, 4px 15px, 0 18px);
+  opacity: 0;
+}
+
+html.desktop-liquid .puppy-cursor-overlay.is-pressed::before {
+  opacity: 1;
 }
 
 html.desktop-liquid button,
@@ -1265,4 +1302,9 @@ html.desktop-liquid .primary,
 html.desktop-liquid .download,
 html.desktop-liquid .reset-button {
   cursor: var(--puppy-cursor) !important;
+}
+
+html.desktop-liquid.has-puppy-cursor-overlay,
+html.desktop-liquid.has-puppy-cursor-overlay * {
+  cursor: none !important;
 }
