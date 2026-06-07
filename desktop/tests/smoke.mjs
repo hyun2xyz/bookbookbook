@@ -125,6 +125,23 @@ try {
   if (updateMenuLabel !== "업데이트 확인") {
     throw new Error("Expected a top menu item for checking updates");
   }
+  const appVersion = await app.evaluate(({ app }) => app.getVersion());
+  if (appVersion !== "1.0.4") {
+    throw new Error(`Expected desktop app version 1.0.4, received ${appVersion}`);
+  }
+  const secondInstanceFocusResult = await app.evaluate(({ app, BrowserWindow }) => {
+    const [window] = BrowserWindow.getAllWindows();
+    window.blur();
+    app.emit("second-instance", {}, [], process.cwd());
+    return {
+      windows: BrowserWindow.getAllWindows().length,
+      focused: window.isFocused(),
+      visible: window.isVisible(),
+    };
+  });
+  if (secondInstanceFocusResult.windows !== 1 || !secondInstanceFocusResult.visible || !secondInstanceFocusResult.focused) {
+    throw new Error(`Expected second app launch to focus the existing window: ${JSON.stringify(secondInstanceFocusResult)}`);
+  }
 
   const introToggle = page.locator("[data-intro-toggle]");
   await introToggle.click();

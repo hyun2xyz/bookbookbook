@@ -12,7 +12,18 @@ const rendererOrigin = pathToFileURL(rendererIndex).href;
 
 app.setName("Bookbookbook");
 
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+}
+
+let mainWindow = null;
+
 function createWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    focusWindow(mainWindow);
+    return mainWindow;
+  }
+
   const initialBounds = getInitialWindowBounds();
   const window = new BrowserWindow({
     width: initialBounds.width,
@@ -23,6 +34,7 @@ function createWindow() {
     backgroundColor: "#ffffff",
     title: "Bookbookbook",
     frame: false,
+    show: false,
     titleBarStyle: "hidden",
     trafficLightPosition: { x: 28, y: 24 },
     transparent: false,
@@ -35,9 +47,21 @@ function createWindow() {
     },
   });
 
+  mainWindow = window;
+
   if (process.platform === "darwin") {
     window.setWindowButtonVisibility(true);
   }
+
+  window.on("closed", () => {
+    if (mainWindow === window) {
+      mainWindow = null;
+    }
+  });
+
+  window.once("ready-to-show", () => {
+    scheduleFocusWindow(window);
+  });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
     openExternalUrl(url);
@@ -54,6 +78,36 @@ function createWindow() {
   });
 
   window.loadFile(rendererIndex, { query: { shell: "desktop" } });
+  return window;
+}
+
+function focusWindow(window) {
+  if (window.isMinimized()) {
+    window.restore();
+  }
+
+  window.show();
+  window.moveTop();
+
+  if (process.platform === "darwin") {
+    app.focus({ steal: true });
+  }
+
+  window.focus();
+}
+
+function scheduleFocusWindow(window) {
+  focusWindow(window);
+
+  for (const delay of [250, 900]) {
+    setTimeout(() => {
+      if (window.isDestroyed()) {
+        return;
+      }
+
+      focusWindow(window);
+    }, delay);
+  }
 }
 
 function getInitialWindowBounds() {
@@ -282,10 +336,18 @@ app.whenReady().then(() => {
   createWindow();
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      focusWindow(mainWindow);
+    } else {
       createWindow();
     }
   });
+});
+
+app.on("second-instance", () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    focusWindow(mainWindow);
+  }
 });
 
 app.on("window-all-closed", () => {
