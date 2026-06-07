@@ -71,6 +71,7 @@ try {
       },
     });
     await assertSmallPaperWarning(page);
+    await assertResetControl(page);
     await convertFixture(page, {
       fixturePath: allSpreadFixturePath,
       outputPath: allSpreadOutputPath,
@@ -182,6 +183,41 @@ async function assertSmallPaperWarning(page) {
   await page.getByRole("button", { name: "소책자 만들기" }).click();
   await page.getByText("출력 용지가 작습니다. 판형을 키워주세요.").waitFor({ timeout: 10_000 });
   await page.locator("[data-paper-size]").selectOption("a4");
+}
+
+async function assertResetControl(page) {
+  await page.locator('input[name="binding"][value="right"]').check();
+  await page.locator("[data-paper-size]").selectOption("custom");
+  await page.getByRole("button", { name: "초기화" }).click();
+  await page.getByText("선택된 PDF가 없습니다.").waitFor({ timeout: 10_000 });
+
+  const resetState = await page.evaluate(() => ({
+    fileCount: document.querySelector("input[type=file]")?.files?.length ?? -1,
+    selectedFile: document.querySelector("[data-preview-name]")?.textContent?.trim(),
+    status: document.querySelector("[data-status]")?.textContent?.trim(),
+    analysisHidden: document.querySelector("[data-analysis]")?.hasAttribute("hidden"),
+    resultHidden: document.querySelector("[data-result]")?.hasAttribute("hidden"),
+    previewIsEmpty: document.querySelector("[data-preview-frame]")?.classList.contains("is-empty"),
+    pageIndicatorHidden: document.querySelector("[data-page-indicator]")?.hasAttribute("hidden"),
+    paperSize: document.querySelector("[data-paper-size]")?.value,
+    leftBinding: document.querySelector('input[name="binding"][value="left"]')?.checked,
+    customHidden: document.querySelector("[data-paper-custom]")?.hasAttribute("hidden"),
+  }));
+
+  if (
+    resetState.fileCount !== 0
+    || resetState.selectedFile !== "선택된 PDF가 없습니다."
+    || resetState.status !== ""
+    || !resetState.analysisHidden
+    || !resetState.resultHidden
+    || !resetState.previewIsEmpty
+    || !resetState.pageIndicatorHidden
+    || resetState.paperSize !== "a4"
+    || !resetState.leftBinding
+    || !resetState.customHidden
+  ) {
+    throw new Error(`Expected the reset button to return the app to its initial state: ${JSON.stringify(resetState)}`);
+  }
 }
 
 async function dropFixture(page, fixturePath) {

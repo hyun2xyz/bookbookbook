@@ -285,7 +285,8 @@ form {
 }
 
 .paper-size-select,
-.paper-mm-input {
+.paper-mm-input,
+.reset-button {
   min-width: 0;
   height: 24px;
   padding: 2px 5px;
@@ -295,6 +296,17 @@ form {
   color: var(--ink);
   font: inherit;
   font-size: 12px;
+}
+
+.reset-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  padding: 0;
+  color: var(--ink);
+  line-height: 1;
+  cursor: pointer;
 }
 
 .paper-size-select {
@@ -308,7 +320,8 @@ form {
 }
 
 .paper-size-select:focus-visible,
-.paper-mm-input:focus-visible {
+.paper-mm-input:focus-visible,
+.reset-button:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
@@ -1087,7 +1100,8 @@ html.desktop-liquid .binding-options .paper-custom {
 }
 
 html.desktop-liquid .paper-size-select,
-html.desktop-liquid .paper-mm-input {
+html.desktop-liquid .paper-mm-input,
+html.desktop-liquid .reset-button {
   height: 22px;
   border-color: rgba(32, 35, 38, 0.14);
   border-radius: 12px;
@@ -1101,6 +1115,12 @@ html.desktop-liquid .paper-size-select {
 
 html.desktop-liquid .paper-mm-input {
   width: 66px;
+}
+
+html.desktop-liquid .reset-button {
+  width: 28px;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
 }
 
 html.desktop-liquid .binding-options label:has(input[type="radio"]:checked) {
@@ -1242,6 +1262,7 @@ html.desktop-liquid .side-menu-toggle *,
 html.desktop-liquid .preview-frame,
 html.desktop-liquid .drop-zone,
 html.desktop-liquid .primary,
-html.desktop-liquid .download {
+html.desktop-liquid .download,
+html.desktop-liquid .reset-button {
   cursor: var(--puppy-cursor) !important;
 }

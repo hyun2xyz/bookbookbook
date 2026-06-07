@@ -10,6 +10,7 @@ const introToggle = getElement<HTMLButtonElement>("[data-intro-toggle]");
 const fileInput = getElement<HTMLInputElement>("[data-file]");
 const dropZone = getElement<HTMLButtonElement>("[data-drop-zone]");
 const submitButton = getElement<HTMLButtonElement>("[data-submit]");
+const resetButton = getElement<HTMLButtonElement>("[data-reset]");
 const statusBox = getElement<HTMLElement>("[data-status]");
 const resultBox = getElement<HTMLElement>("[data-result]");
 const previewEmpty = getElement<HTMLElement>("[data-preview-empty]");
@@ -72,6 +73,10 @@ blankPageNumberInput.addEventListener("focus", () => {
 });
 
 paperSizeSelect.addEventListener("change", updatePaperCustomVisibility);
+
+resetButton.addEventListener("click", () => {
+  void resetApp();
+});
 
 pageNumberInput.addEventListener("change", () => {
   void showPreviewPageFromInput();
@@ -256,11 +261,7 @@ async function showPreviewPage(page: number): Promise<void> {
 
 async function resetPreview(): Promise<void> {
   previewRenderToken += 1;
-  await previewRenderQueue.catch(() => {});
-
-  if (previewState) {
-    await previewState.document.destroy();
-  }
+  const documentToDestroy = previewState?.document ?? null;
 
   previewState = null;
   pageIndicator.hidden = true;
@@ -274,6 +275,33 @@ async function resetPreview(): Promise<void> {
   previewEmpty.hidden = false;
   previewFrame.classList.add("is-empty");
   previewEmptyMessage.textContent = "드래그 엔 드롭 가능";
+
+  await previewRenderQueue.catch(() => {});
+  if (documentToDestroy) {
+    await documentToDestroy.destroy();
+  }
+}
+
+async function resetApp(): Promise<void> {
+  previewRequestId += 1;
+  fileInput.value = "";
+  previewName.textContent = "선택된 PDF가 없습니다.";
+  statusBox.textContent = "";
+  resetResult();
+  resetAnalysis();
+  resetFormDefaults();
+  await resetPreview();
+}
+
+function resetFormDefaults(): void {
+  const defaultBinding = form.querySelector<HTMLInputElement>('input[name="binding"][value="left"]');
+  if (defaultBinding) {
+    defaultBinding.checked = true;
+  }
+  paperSizeSelect.value = "a4";
+  paperWidthInput.value = "450";
+  paperHeightInput.value = "640";
+  updatePaperCustomVisibility();
 }
 
 async function showPreviewPageFromInput(): Promise<void> {
