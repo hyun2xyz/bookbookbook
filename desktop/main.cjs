@@ -22,6 +22,7 @@ function createWindow() {
     center: true,
     backgroundColor: "#ffffff",
     title: "Bookbookbook",
+    frame: false,
     titleBarStyle: "hidden",
     trafficLightPosition: { x: 28, y: 24 },
     transparent: false,
@@ -33,6 +34,10 @@ function createWindow() {
       webSecurity: true,
     },
   });
+
+  if (process.platform === "darwin") {
+    window.setWindowButtonVisibility(true);
+  }
 
   window.webContents.setWindowOpenHandler(({ url }) => {
     openExternalUrl(url);
