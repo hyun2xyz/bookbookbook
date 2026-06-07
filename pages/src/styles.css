@@ -1221,7 +1221,10 @@ html.desktop-liquid form:has(.result:not([hidden])) .primary {
 
 html.desktop-liquid,
 html.desktop-liquid * {
-  --puppy-cursor: url("./assets/puppy-13-cursor.webp") 32 32, auto;
+  /* Puppy 13 cursor from Cursors-4U:
+     https://www.cursors-4u.com/cursor/puppy-13
+     Creator listed as Wackypixel Co.; license shown as unknown. */
+  --puppy-cursor: url("https://cdn.cursors-4u.net/previews/puppy-13-a9c1ade9-32.webp") 32 32, auto;
   cursor: var(--puppy-cursor) !important;
 }
 

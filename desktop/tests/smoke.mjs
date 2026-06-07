@@ -112,7 +112,7 @@ try {
   }
   if (
     ![desktopSummary.appCursor, desktopSummary.menuCursor, desktopSummary.selectCursor, desktopSummary.titlebarCursor]
-      .every((cursorValue) => cursorValue.includes("data:image/webp") && cursorValue.includes("32 32"))
+      .every((cursorValue) => cursorValue.includes("cdn.cursors-4u.net/previews/puppy-13-a9c1ade9-32.webp") && cursorValue.includes("32 32"))
   ) {
     throw new Error(`Expected the desktop app to use the puppy cursor: ${JSON.stringify(desktopSummary)}`);
   }
