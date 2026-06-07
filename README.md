@@ -1,6 +1,6 @@
 ![Bookbookbook](assets/bookbookbook.png)
 
-[업데이트 노트 v1.0.6](docs/release-notes-1.0.6.md)
+[업데이트 노트 v1.0.7](docs/release-notes-1.0.7.md)
 
 Bookbookbook(북북북 쓰다듬기)는 PDF로 뽑은 파일을 중철 출력용 PDF로 바꿔주는 도구입니다.
 
@@ -151,7 +151,7 @@ npm run dist
 생성 위치:
 
 ```text
-desktop/dist/Bookbookbook-1.0.6.dmg
+desktop/dist/Bookbookbook-1.0.7.dmg
 ```
 
 주의: 현재 DMG는 Developer ID 서명과 notarization이 없는 로컬 빌드입니다. 인터넷에 공개 배포하려면 Apple Developer ID 서명과 notarization을 추가해야 합니다.

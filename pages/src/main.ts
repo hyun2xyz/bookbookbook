@@ -33,10 +33,15 @@ const paperHeightInput = getElement<HTMLInputElement>("[data-paper-height]");
 const PAPER_SIZES_MM = {
   a4: { width: 210, height: 297 },
   a3: { width: 297, height: 420 },
+  a2: { width: 420, height: 594 },
+  a1: { width: 594, height: 841 },
+  a0: { width: 841, height: 1189 },
   b5: { width: 176, height: 250 },
   b4: { width: 250, height: 353 },
-  sra4: { width: 225, height: 320 },
-  sra3: { width: 320, height: 450 },
+  b3: { width: 353, height: 500 },
+  b2: { width: 500, height: 707 },
+  b1: { width: 707, height: 1000 },
+  b0: { width: 1000, height: 1414 },
   letter: { width: 216, height: 279 },
   tabloid: { width: 279, height: 432 },
 } as const;

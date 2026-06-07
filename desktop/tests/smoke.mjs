@@ -9,6 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const desktopRoot = resolve(__dirname, "..");
 const fixturePath = resolve(desktopRoot, "dist", "desktop-smoke-fixture.pdf");
 const executablePath = process.env.BOOKBOOKBOOK_APP || undefined;
+const expectedPaperOptions = ["A4", "A3", "A2", "A1", "A0", "B5", "B4", "B3", "B2", "B1", "B0", "Letter", "Tabloid", "커스텀"];
 
 await createFixturePdf(fixturePath);
 
@@ -126,8 +127,8 @@ try {
     throw new Error("Expected a top menu item for checking updates");
   }
   const appVersion = await app.evaluate(({ app }) => app.getVersion());
-  if (appVersion !== "1.0.6") {
-    throw new Error(`Expected desktop app version 1.0.6, received ${appVersion}`);
+  if (appVersion !== "1.0.7") {
+    throw new Error(`Expected desktop app version 1.0.7, received ${appVersion}`);
   }
   const secondInstanceFocusResult = await app.evaluate(({ app, BrowserWindow }) => {
     const [window] = BrowserWindow.getAllWindows();
@@ -137,10 +138,11 @@ try {
       windows: BrowserWindow.getAllWindows().length,
       focused: window.isFocused(),
       visible: window.isVisible(),
+      minimized: window.isMinimized(),
     };
   });
-  if (secondInstanceFocusResult.windows !== 1 || !secondInstanceFocusResult.visible || !secondInstanceFocusResult.focused) {
-    throw new Error(`Expected second app launch to focus the existing window: ${JSON.stringify(secondInstanceFocusResult)}`);
+  if (secondInstanceFocusResult.windows !== 1 || !secondInstanceFocusResult.visible || secondInstanceFocusResult.minimized) {
+    throw new Error(`Expected second app launch to surface the existing window: ${JSON.stringify(secondInstanceFocusResult)}`);
   }
 
   const introToggle = page.locator("[data-intro-toggle]");
@@ -207,7 +209,7 @@ try {
       textWidthProbe.remove();
       return {
         value: select.value,
-        optionsText: Array.from(select.options).map((option) => option.textContent?.trim()).join(" "),
+        options: Array.from(select.options).map((option) => option.textContent?.trim() ?? ""),
         width: rect.width,
         textWidth,
       };
@@ -215,8 +217,8 @@ try {
     if (
       !paperSelectLayout
       || paperSelectLayout.value !== "a4"
-      || paperSelectLayout.optionsText.includes("선택 안 함")
-      || !paperSelectLayout.optionsText.includes("커스텀")
+      || paperSelectLayout.options.includes("선택 안 함")
+      || JSON.stringify(paperSelectLayout.options) !== JSON.stringify(expectedPaperOptions)
       || paperSelectLayout.width < paperSelectLayout.textWidth + 28
     ) {
       throw new Error(`Expected the paper select to default to A4 and fit the custom label: ${JSON.stringify(paperSelectLayout)}`);

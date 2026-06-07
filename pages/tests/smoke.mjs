@@ -14,6 +14,7 @@ const readerOutputPath = resolve(__dirname, "smoke-output-reader-spreads.pdf");
 const allSpreadFixturePath = resolve(__dirname, "all-spreads-fixture.pdf");
 const allSpreadOutputPath = resolve(__dirname, "smoke-output-all-spreads.pdf");
 const port = await getAvailablePort();
+const expectedPaperOptions = ["A4", "A3", "A2", "A1", "A0", "B5", "B4", "B3", "B2", "B1", "B0", "Letter", "Tabloid", "커스텀"];
 
 await createReaderSpreadFixturePdf(readerFixturePath);
 await createAllSpreadFixturePdf(allSpreadFixturePath);
@@ -335,9 +336,12 @@ async function assertPaperControl(page) {
   if (value !== "a4") {
     throw new Error(`Expected default paper setting to be A4, received ${value}`);
   }
-  const optionsText = await paperSelect.evaluate((select) => Array.from(select.options).map((option) => option.textContent?.trim()).join(" "));
+  const options = await paperSelect.evaluate((select) => Array.from(select.options).map((option) => option.textContent?.trim() ?? ""));
+  const optionsText = options.join(" ");
   assertExcludes(optionsText, "선택 안 함");
-  assertIncludes(optionsText, "커스텀");
+  if (JSON.stringify(options) !== JSON.stringify(expectedPaperOptions)) {
+    throw new Error(`Expected full A/B paper preset options: ${JSON.stringify(options)}`);
+  }
 
   const bindingBox = await page.locator(".binding-options").boundingBox();
   const selectBox = await paperSelect.boundingBox();
