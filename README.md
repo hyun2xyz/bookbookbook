@@ -1,6 +1,6 @@
 ![Bookbookbook](assets/bookbookbook.png)
 
-[업데이트 노트 v1.0.7](docs/release-notes-1.0.7.md)
+[업데이트 노트 v1.0.8](docs/release-notes-1.0.8.md)
 
 Bookbookbook(북북북 쓰다듬기)는 PDF로 뽑은 파일을 중철 출력용 PDF로 바꿔주는 도구입니다.
 

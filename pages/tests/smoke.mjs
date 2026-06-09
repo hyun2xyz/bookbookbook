@@ -11,10 +11,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 const readerFixturePath = resolve(__dirname, "reader-spreads-fixture.pdf");
 const readerOutputPath = resolve(__dirname, "smoke-output-reader-spreads.pdf");
+const readerNoPaperOutputPath = resolve(__dirname, "smoke-output-reader-no-paper.pdf");
 const allSpreadFixturePath = resolve(__dirname, "all-spreads-fixture.pdf");
 const allSpreadOutputPath = resolve(__dirname, "smoke-output-all-spreads.pdf");
 const port = await getAvailablePort();
-const expectedPaperOptions = ["A4", "A3", "A2", "A1", "A0", "B5", "B4", "B3", "B2", "B1", "B0", "Letter", "Tabloid", "커스텀"];
+const expectedPaperOptions = ["선택 안 함", "A4", "A3", "A2", "A1", "A0", "B5", "B4", "B3", "B2", "B1", "B0", "Letter", "Tabloid", "커스텀"];
 
 await createReaderSpreadFixturePdf(readerFixturePath);
 await createAllSpreadFixturePdf(allSpreadFixturePath);
@@ -86,6 +87,19 @@ try {
     await assertSmallPaperWarning(page);
     await assertResetControl(page);
     await convertFixture(page, {
+      fixturePath: readerFixturePath,
+      outputPath: readerNoPaperOutputPath,
+      paperSize: "none",
+      expectedSummary: {
+        "원본 PDF 페이지": 4,
+        "분리 후 책 쪽수": 6,
+        "추가된 빈 페이지": 2,
+        "중철 인쇄면": 4,
+        "출력 용지 장수": 4,
+        "한 장당 배치": "1개",
+      },
+    });
+    await convertFixture(page, {
       fixturePath: allSpreadFixturePath,
       outputPath: allSpreadOutputPath,
       paperSize: "a3",
@@ -104,6 +118,7 @@ try {
   }
 
   await assertOutputPdf(readerOutputPath, 4, 1191, 842);
+  await assertOutputPdf(readerNoPaperOutputPath, 4, 840, 595);
   await assertOutputPdf(allSpreadOutputPath, 2, 1191, 842);
 
   console.log("Smoke test passed: browser converted mixed and all-spread PDFs into valid booklet PDFs.");
@@ -337,8 +352,6 @@ async function assertPaperControl(page) {
     throw new Error(`Expected default paper setting to be A4, received ${value}`);
   }
   const options = await paperSelect.evaluate((select) => Array.from(select.options).map((option) => option.textContent?.trim() ?? ""));
-  const optionsText = options.join(" ");
-  assertExcludes(optionsText, "선택 안 함");
   if (JSON.stringify(options) !== JSON.stringify(expectedPaperOptions)) {
     throw new Error(`Expected full A/B paper preset options: ${JSON.stringify(options)}`);
   }
@@ -351,7 +364,7 @@ async function assertPaperControl(page) {
   const selectLabelWidth = await paperSelect.evaluate((select) => {
     const textWidthProbe = document.createElement("span");
     const styles = getComputedStyle(select);
-    textWidthProbe.textContent = "커스텀";
+    textWidthProbe.textContent = "선택 안 함";
     textWidthProbe.style.position = "absolute";
     textWidthProbe.style.visibility = "hidden";
     textWidthProbe.style.whiteSpace = "nowrap";

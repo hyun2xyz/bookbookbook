@@ -322,7 +322,7 @@ form {
 }
 
 .paper-size-select {
-  width: 104px;
+  width: 116px;
   padding-right: 6px;
 }
 
@@ -1128,7 +1128,7 @@ html.desktop-liquid .reset-button {
 }
 
 html.desktop-liquid .paper-size-select {
-  width: 84px;
+  width: 104px;
 }
 
 html.desktop-liquid .paper-mm-input {
