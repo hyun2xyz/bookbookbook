@@ -5,6 +5,8 @@ const { pathToFileURL } = require("node:url");
 const githubRepo = "hyun2xyz/bookbookbook";
 const githubReleasesUrl = `https://github.com/${githubRepo}/releases`;
 const githubLatestReleaseApiUrl = `https://api.github.com/repos/${githubRepo}/releases/latest`;
+const websiteUrl = "https://hyun2xyz.github.io/bookbookbook/";
+const isMasBuild = Boolean(process.mas);
 const rendererIndex = app.isPackaged
   ? path.join(__dirname, "renderer", "index.html")
   : path.join(__dirname, "..", "pages", "dist", "index.html");
@@ -138,7 +140,7 @@ function createApplicationMenu() {
               id: "check-for-updates",
               label: "업데이트 확인",
               click: (_menuItem, browserWindow) => {
-                void checkForUpdates(browserWindow ?? BrowserWindow.getFocusedWindow());
+                void handleUpdateCheck(browserWindow ?? BrowserWindow.getFocusedWindow());
               },
             },
             { type: "separator" },
@@ -158,7 +160,7 @@ function createApplicationMenu() {
               id: "check-for-updates",
               label: "업데이트 확인",
               click: (_menuItem, browserWindow) => {
-                void checkForUpdates(browserWindow ?? BrowserWindow.getFocusedWindow());
+                void handleUpdateCheck(browserWindow ?? BrowserWindow.getFocusedWindow());
               },
             },
             { type: "separator" },
@@ -195,9 +197,9 @@ function createApplicationMenu() {
       label: "도움말",
       submenu: [
         {
-          label: "GitHub 릴리즈 열기",
+          label: isMasBuild ? "Bookbookbook 웹사이트 열기" : "GitHub 릴리즈 열기",
           click: () => {
-            openExternalUrl(githubReleasesUrl);
+            openExternalUrl(isMasBuild ? websiteUrl : githubReleasesUrl);
           },
         },
       ],
@@ -205,6 +207,20 @@ function createApplicationMenu() {
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+async function handleUpdateCheck(owner) {
+  if (isMasBuild) {
+    await showUpdateDialog(owner, {
+      message: "App Store에서 업데이트할 수 있습니다.",
+      detail: "Mac App Store 버전은 App Store 앱의 업데이트 목록에서 최신 버전을 확인하고 설치해 주세요.",
+      buttons: ["확인"],
+      url: websiteUrl,
+    });
+    return;
+  }
+
+  await checkForUpdates(owner);
 }
 
 async function checkForUpdates(owner) {
