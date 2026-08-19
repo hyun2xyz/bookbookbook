@@ -150,16 +150,17 @@ async function packPrinterSpreadsOnOutputSheets(
     for (let slotIndex = 0; slotIndex < sheetLayout.capacity; slotIndex += 1) {
       const frontSpread = embeddedSpreads[baseIndex + slotIndex * 2];
       const backSpread = embeddedSpreads[baseIndex + slotIndex * 2 + 1];
-      const slot = getSheetSlot(sheetLayout, slotIndex);
+      const frontSlot = getSheetSlot(sheetLayout, slotIndex);
+      const backSlot = getSheetSlot(sheetLayout, slotIndex, true);
 
       if (frontSpread) {
-        drawPackedSpread(frontSheet, frontSpread, slot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
-        drawTrimMarks(frontSheet, slot.x, slot.y, slot.width, slot.height);
+        drawPackedSpread(frontSheet, frontSpread, frontSlot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
+        drawTrimMarks(frontSheet, frontSlot.x, frontSlot.y, frontSlot.width, frontSlot.height);
       }
 
       if (backSpread) {
-        drawPackedSpread(backSheet, backSpread, slot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
-        drawTrimMarks(backSheet, slot.x, slot.y, slot.width, slot.height);
+        drawPackedSpread(backSheet, backSpread, backSlot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
+        drawTrimMarks(backSheet, backSlot.x, backSlot.y, backSlot.width, backSlot.height);
       }
     }
   }
@@ -264,8 +265,9 @@ function drawTrimMarks(sheet: PDFPage, trimX: number, trimY: number, trimWidth: 
   });
 }
 
-function getSheetSlot(sheetLayout: SheetLayout, slotIndex: number): SlotRect {
-  const column = slotIndex % sheetLayout.columns;
+function getSheetSlot(sheetLayout: SheetLayout, slotIndex: number, mirrorColumns = false): SlotRect {
+  const sourceColumn = slotIndex % sheetLayout.columns;
+  const column = mirrorColumns ? sheetLayout.columns - 1 - sourceColumn : sourceColumn;
   const row = Math.floor(slotIndex / sheetLayout.columns);
   const visualRow = sheetLayout.rows - 1 - row;
 
