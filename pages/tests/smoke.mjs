@@ -16,6 +16,7 @@ const allSpreadFixturePath = resolve(__dirname, "all-spreads-fixture.pdf");
 const allSpreadOutputPath = resolve(__dirname, "smoke-output-all-spreads.pdf");
 const port = await getAvailablePort();
 const expectedPaperOptions = ["선택 안 함", "A4", "A3", "A2", "A1", "A0", "B5", "B4", "B3", "B2", "B1", "B0", "Letter", "Tabloid", "커스텀"];
+const expectedDuplexOptions = ["자동 (용지 방향 맞춤)", "긴 쪽 넘김", "짧은 쪽 넘김"];
 
 await createReaderSpreadFixturePdf(readerFixturePath);
 await createAllSpreadFixturePdf(allSpreadFixturePath);
@@ -69,12 +70,14 @@ try {
     assertIncludes(openedText, "PDF를 중철제본이 가능한 소책자 PDF로 만드는");
     assertIncludes(openedText, "단! 재단선 도련선을 끄고 PDF 로 출력후에 북북북으로 변환하세요.");
     await assertPaperControl(page);
+    await assertDuplexControl(page);
     await assertPagesButtonStyle(page);
     await convertFixture(page, {
       fixturePath: readerFixturePath,
       outputPath: readerOutputPath,
       inputMode: "drop",
       paperSize: "a3",
+      duplexFlip: "long-edge",
       expectedSummary: {
         "원본 PDF 페이지": 4,
         "분리 후 책 쪽수": 6,
@@ -82,6 +85,7 @@ try {
         "중철 인쇄면": 4,
         "출력 용지 장수": 4,
         "한 장당 배치": "1개",
+        "프린터 양면 설정": "긴 쪽 넘김",
       },
     });
     await assertSmallPaperWarning(page);
@@ -97,6 +101,7 @@ try {
         "중철 인쇄면": 4,
         "출력 용지 장수": 4,
         "한 장당 배치": "1개",
+        "프린터 양면 설정": "짧은 쪽 넘김",
       },
     });
     await convertFixture(page, {
@@ -110,6 +115,7 @@ try {
         "중철 인쇄면": 2,
         "출력 용지 장수": 2,
         "한 장당 배치": "1개",
+        "프린터 양면 설정": "짧은 쪽 넘김",
       },
     });
     assertNoPageErrors(pageErrors);
@@ -156,7 +162,7 @@ async function createAllSpreadFixturePdf(path) {
   await writeFile(path, await source.save());
 }
 
-async function convertFixture(page, { fixturePath, outputPath, inputMode, expectedSummary, paperSize = "a4" }) {
+async function convertFixture(page, { fixturePath, outputPath, inputMode, expectedSummary, paperSize = "a4", duplexFlip = "auto" }) {
   if (inputMode === "drop") {
     await dropFixture(page, fixturePath);
   } else {
@@ -180,6 +186,7 @@ async function convertFixture(page, { fixturePath, outputPath, inputMode, expect
   await assertPageNumberFollowsFileName(page);
 
   await page.locator("[data-paper-size]").selectOption(paperSize);
+  await page.locator("[data-duplex-flip]").selectOption(duplexFlip);
 
   const blankPlacementVisible = await page.locator("[data-blank-placement]").isVisible();
   if (expectedSummary["추가된 빈 페이지"] > 0 && !blankPlacementVisible) {
@@ -196,6 +203,7 @@ async function convertFixture(page, { fixturePath, outputPath, inputMode, expect
   Object.entries(expectedSummary).forEach(([label, value]) => {
     assertIncludes(summary, `${label} ${value}`);
   });
+  assertIncludes(summary, "프린터에서도 같은 넘김 방향을 선택하세요.");
   await assertDownloadButtonStyle(page);
 
   const [download] = await Promise.all([
@@ -216,6 +224,7 @@ async function assertSmallPaperWarning(page) {
 
 async function assertResetControl(page) {
   await page.locator('input[name="binding"][value="right"]').check();
+  await page.locator("[data-duplex-flip]").selectOption("short-edge");
   await page.locator("[data-paper-size]").selectOption("custom");
   await page.getByRole("button", { name: "초기화" }).click();
   await page.getByText("선택된 PDF가 없습니다.").waitFor({ timeout: 10_000 });
@@ -229,6 +238,7 @@ async function assertResetControl(page) {
     previewIsEmpty: document.querySelector("[data-preview-frame]")?.classList.contains("is-empty"),
     pageIndicatorHidden: document.querySelector("[data-page-indicator]")?.hasAttribute("hidden"),
     paperSize: document.querySelector("[data-paper-size]")?.value,
+    duplexFlip: document.querySelector("[data-duplex-flip]")?.value,
     leftBinding: document.querySelector('input[name="binding"][value="left"]')?.checked,
     customHidden: document.querySelector("[data-paper-custom]")?.hasAttribute("hidden"),
   }));
@@ -242,6 +252,7 @@ async function assertResetControl(page) {
     || !resetState.previewIsEmpty
     || !resetState.pageIndicatorHidden
     || resetState.paperSize !== "a4"
+    || resetState.duplexFlip !== "auto"
     || !resetState.leftBinding
     || !resetState.customHidden
   ) {
@@ -384,6 +395,19 @@ async function assertPaperControl(page) {
     throw new Error("Expected custom paper mm inputs to appear when custom paper is selected");
   }
   await paperSelect.selectOption("a4");
+}
+
+async function assertDuplexControl(page) {
+  const duplexSelect = page.locator("[data-duplex-flip]");
+  await duplexSelect.waitFor({ timeout: 10_000 });
+  const value = await duplexSelect.inputValue();
+  if (value !== "auto") {
+    throw new Error(`Expected default duplex flip setting to be automatic, received ${value}`);
+  }
+  const options = await duplexSelect.evaluate((select) => Array.from(select.options).map((option) => option.textContent?.trim() ?? ""));
+  if (JSON.stringify(options) !== JSON.stringify(expectedDuplexOptions)) {
+    throw new Error(`Expected automatic, long-edge, and short-edge duplex options: ${JSON.stringify(options)}`);
+  }
 }
 
 async function assertPagesButtonStyle(page) {

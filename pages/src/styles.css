@@ -285,17 +285,20 @@ form {
   border-radius: 999px;
 }
 
+.duplex-control,
 .paper-control,
 .paper-custom {
   gap: 6px;
   white-space: nowrap;
 }
 
+.binding-options .duplex-control,
 .binding-options .paper-control,
 .binding-options .paper-custom {
   padding: 5px 8px;
 }
 
+.duplex-flip-select,
 .paper-size-select,
 .paper-mm-input,
 .reset-button {
@@ -326,11 +329,17 @@ form {
   padding-right: 6px;
 }
 
+.duplex-flip-select {
+  width: 158px;
+  padding-right: 6px;
+}
+
 .paper-mm-input {
   width: 64px;
   text-align: right;
 }
 
+.duplex-flip-select:focus-visible,
 .paper-size-select:focus-visible,
 .paper-mm-input:focus-visible,
 .reset-button:focus-visible {
@@ -657,6 +666,13 @@ p {
 
 .result-grid {
   margin-bottom: 14px;
+}
+
+.duplex-print-note {
+  margin: -4px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .usage-guide {
@@ -1112,11 +1128,13 @@ html.desktop-liquid .binding-options label {
   padding: 6px 10px;
 }
 
+html.desktop-liquid .binding-options .duplex-control,
 html.desktop-liquid .binding-options .paper-control,
 html.desktop-liquid .binding-options .paper-custom {
   padding: 5px 8px;
 }
 
+html.desktop-liquid .duplex-flip-select,
 html.desktop-liquid .paper-size-select,
 html.desktop-liquid .paper-mm-input,
 html.desktop-liquid .reset-button {
@@ -1129,6 +1147,10 @@ html.desktop-liquid .reset-button {
 
 html.desktop-liquid .paper-size-select {
   width: 104px;
+}
+
+html.desktop-liquid .duplex-flip-select {
+  width: 154px;
 }
 
 html.desktop-liquid .paper-mm-input {

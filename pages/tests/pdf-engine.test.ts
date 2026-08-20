@@ -1,4 +1,7 @@
+import { fileURLToPath } from "node:url";
+
 import { PDFDocument, StandardFonts } from "pdf-lib";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { describe, expect, it } from "vitest";
 
 import { analyzePdfForBooklet, convertPdfToBooklet } from "../src/pdf-engine";
@@ -50,6 +53,39 @@ async function createSinglePageFixture(pageCount: number, width = 297, height = 
     page.drawText(`reader page ${index + 1}`, { x: 24, y: height - 48, size: 18, font });
   });
   return source.save();
+}
+
+interface TextPosition {
+  x: number;
+  y: number;
+}
+
+async function getTextPositions(bytes: Uint8Array, pageNumber: number): Promise<Map<string, TextPosition>> {
+  const standardFontDataUrl = fileURLToPath(new URL("../node_modules/pdfjs-dist/standard_fonts/", import.meta.url));
+  const document = await getDocument({ data: bytes.slice(), standardFontDataUrl }).promise;
+
+  try {
+    const page = await document.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+
+    return new Map(
+      textContent.items
+        .filter((item): item is Extract<(typeof textContent.items)[number], { str: string }> => "str" in item)
+        .map((item) => [item.str, { x: item.transform[4], y: item.transform[5] }]),
+    );
+  } finally {
+    await document.destroy();
+  }
+}
+
+function requireTextPosition(positions: Map<string, TextPosition>, text: string): TextPosition {
+  const position = positions.get(text);
+
+  if (!position) {
+    throw new Error(`Missing expected PDF text: ${text}`);
+  }
+
+  return position;
 }
 
 describe("browser PDF engine", () => {
@@ -186,6 +222,107 @@ describe("browser PDF engine", () => {
       spreadsPerOutputSheet: 3,
     });
     expect(output.getPageCount()).toBe(2);
+  });
+
+  it("maps landscape short-edge duplex backs across columns without swapping each spread", async () => {
+    const sourceBytes = await createSinglePageFixture(16, 100, 100);
+
+    const result = await convertPdfToBooklet(sourceBytes, {
+      binding: "left",
+      duplexFlip: "short-edge",
+      trimMarks: { paperWidthMm: 190, paperHeightMm: 120 },
+    });
+    const backText = await getTextPositions(result.bytes, 2);
+    const page2 = requireTextPosition(backText, "reader page 2");
+    const page4 = requireTextPosition(backText, "reader page 4");
+    const page6 = requireTextPosition(backText, "reader page 6");
+    const page8 = requireTextPosition(backText, "reader page 8");
+    const page15 = requireTextPosition(backText, "reader page 15");
+
+    expect(page2.x).toBeGreaterThan(page4.x);
+    expect(page6.x).toBeGreaterThan(page8.x);
+    expect(page2.y).toBeGreaterThan(page6.y);
+    expect(page4.y).toBeGreaterThan(page8.y);
+    expect(page2.x).toBeLessThan(page15.x);
+    expect(result.duplexFlipEdge).toBe("short-edge");
+  });
+
+  it("maps landscape long-edge duplex backs across rows and swaps each spread", async () => {
+    const sourceBytes = await createSinglePageFixture(16, 100, 100);
+
+    const result = await convertPdfToBooklet(sourceBytes, {
+      binding: "left",
+      duplexFlip: "long-edge",
+      trimMarks: { paperWidthMm: 190, paperHeightMm: 120 },
+    });
+    const backText = await getTextPositions(result.bytes, 2);
+    const page2 = requireTextPosition(backText, "reader page 2");
+    const page4 = requireTextPosition(backText, "reader page 4");
+    const page6 = requireTextPosition(backText, "reader page 6");
+    const page8 = requireTextPosition(backText, "reader page 8");
+    const page15 = requireTextPosition(backText, "reader page 15");
+
+    expect(page2.x).toBeLessThan(page4.x);
+    expect(page6.x).toBeLessThan(page8.x);
+    expect(page2.y).toBeLessThan(page6.y);
+    expect(page4.y).toBeLessThan(page8.y);
+    expect(page2.x).toBeGreaterThan(page15.x);
+    expect(result.duplexFlipEdge).toBe("long-edge");
+  });
+
+  it("keeps portrait long-edge duplex backs in matching rows without swapping each spread", async () => {
+    const sourceBytes = await createSinglePageFixture(8);
+
+    const result = await convertPdfToBooklet(sourceBytes, {
+      binding: "left",
+      duplexFlip: "long-edge",
+      trimMarks: { paperWidthMm: 297, paperHeightMm: 420 },
+    });
+    const backText = await getTextPositions(result.bytes, 2);
+    const page2 = requireTextPosition(backText, "reader page 2");
+    const page4 = requireTextPosition(backText, "reader page 4");
+    const page7 = requireTextPosition(backText, "reader page 7");
+
+    expect(page2.y).toBeGreaterThan(page4.y);
+    expect(page2.x).toBeLessThan(page7.x);
+    expect(result.duplexFlipEdge).toBe("long-edge");
+  });
+
+  it("maps portrait short-edge duplex backs across rows and swaps each spread", async () => {
+    const sourceBytes = await createSinglePageFixture(8);
+
+    const result = await convertPdfToBooklet(sourceBytes, {
+      binding: "left",
+      duplexFlip: "short-edge",
+      trimMarks: { paperWidthMm: 297, paperHeightMm: 420 },
+    });
+    const backText = await getTextPositions(result.bytes, 2);
+    const page2 = requireTextPosition(backText, "reader page 2");
+    const page4 = requireTextPosition(backText, "reader page 4");
+    const page7 = requireTextPosition(backText, "reader page 7");
+
+    expect(page2.y).toBeLessThan(page4.y);
+    expect(page2.x).toBeGreaterThan(page7.x);
+    expect(result.duplexFlipEdge).toBe("short-edge");
+  });
+
+  it("resolves automatic duplex flipping to the upright book-like edge for the final sheet orientation", async () => {
+    const landscapeSourceBytes = await createSinglePageFixture(16, 100, 100);
+    const portraitSourceBytes = await createSinglePageFixture(8);
+
+    const landscape = await convertPdfToBooklet(landscapeSourceBytes, {
+      binding: "left",
+      duplexFlip: "auto",
+      trimMarks: { paperWidthMm: 190, paperHeightMm: 120 },
+    });
+    const portrait = await convertPdfToBooklet(portraitSourceBytes, {
+      binding: "left",
+      duplexFlip: "auto",
+      trimMarks: { paperWidthMm: 297, paperHeightMm: 420 },
+    });
+
+    expect(landscape.duplexFlipEdge).toBe("short-edge");
+    expect(portrait.duplexFlipEdge).toBe("long-edge");
   });
 
   it("warns when the selected output paper is smaller than the final spread", async () => {

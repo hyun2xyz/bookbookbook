@@ -31,13 +31,18 @@ export interface BookletAnalysis extends ConversionSummary {
 export interface ConvertOptions {
   binding: Binding;
   blankPlacement?: BlankPlacement;
+  duplexFlip?: DuplexFlipSelection;
   trimMarks?: TrimMarkOptions;
 }
 
 export interface ConvertResult {
   bytes: Uint8Array;
+  duplexFlipEdge: DuplexFlipEdge;
   summary: ConversionSummary;
 }
+
+export type DuplexFlipSelection = "auto" | DuplexFlipEdge;
+export type DuplexFlipEdge = "long-edge" | "short-edge";
 
 export interface TrimMarkOptions {
   paperWidthMm: number;
@@ -72,6 +77,8 @@ interface SlotRect {
   height: number;
 }
 
+type FlipAxis = "vertical" | "horizontal";
+
 const MIN_TRIM_MARK_MARGIN = millimetersToPoints(11);
 const TRIM_MARK_GAP = millimetersToPoints(2);
 const TRIM_MARK_LENGTH = millimetersToPoints(9);
@@ -94,8 +101,16 @@ export async function convertPdfToBooklet(
   const printerPairs = buildPrinterPairs(logicalPages.length, options.binding);
   const trimWidth = singlePage.width * 2;
   const trimHeight = singlePage.height;
+  const sheetLayout = options.trimMarks ? resolveSheetLayout(options.trimMarks, trimWidth, trimHeight) : undefined;
+  const outputWidth = sheetLayout?.width ?? trimWidth;
+  const outputHeight = sheetLayout?.height ?? trimHeight;
+  const duplexFlipEdge = resolveDuplexFlipEdge(options.duplexFlip ?? "auto", outputWidth, outputHeight);
+  const flipAxis = resolveFlipAxis(duplexFlipEdge, outputWidth, outputHeight);
+  const spreadRotation = sheetLayout?.spreadRotation ?? 0;
+  const swapBackSpreadPages = shouldSwapBackSpreadPages(flipAxis, spreadRotation);
 
-  printerPairs.forEach(([leftNumber, rightNumber]) => {
+  printerPairs.forEach((pair, pairIndex) => {
+    const [leftNumber, rightNumber] = pairIndex % 2 === 1 && swapBackSpreadPages ? [pair[1], pair[0]] : pair;
     const sheet = outputDoc.addPage([trimWidth, trimHeight]);
     const leftPage = logicalPages[leftNumber - 1];
     const rightPage = logicalPages[rightNumber - 1];
@@ -105,8 +120,8 @@ export async function convertPdfToBooklet(
   });
 
   const bookletBytes = await outputDoc.save();
-  const packedOutput = options.trimMarks
-    ? await packPrinterSpreadsOnOutputSheets(bookletBytes, trimWidth, trimHeight, options.trimMarks)
+  const packedOutput = sheetLayout
+    ? await packPrinterSpreadsOnOutputSheets(bookletBytes, trimWidth, trimHeight, sheetLayout, flipAxis)
     : {
         bytes: bookletBytes,
         outputSheets: printerPairs.length,
@@ -115,6 +130,7 @@ export async function convertPdfToBooklet(
 
   return {
     bytes: packedOutput.bytes,
+    duplexFlipEdge,
     summary: {
       originalPdfPages: sourcePages.length,
       readerPagesBeforePadding: readerSlots.length,
@@ -131,7 +147,8 @@ async function packPrinterSpreadsOnOutputSheets(
   bookletBytes: Uint8Array,
   spreadWidth: number,
   spreadHeight: number,
-  trimMarks: TrimMarkOptions,
+  sheetLayout: SheetLayout,
+  flipAxis: FlipAxis,
 ): Promise<{ bytes: Uint8Array; outputSheets: number; spreadsPerOutputSheet: number }> {
   const sourceDoc = await PDFDocument.load(bookletBytes);
   const sourcePages = sourceDoc.getPages();
@@ -140,7 +157,6 @@ async function packPrinterSpreadsOnOutputSheets(
     bookletBytes,
     sourcePages.map((_page, index) => index),
   );
-  const sheetLayout = resolveSheetLayout(trimMarks, spreadWidth, spreadHeight);
   const pairSpan = sheetLayout.capacity * 2;
 
   for (let baseIndex = 0; baseIndex < embeddedSpreads.length; baseIndex += pairSpan) {
@@ -150,16 +166,17 @@ async function packPrinterSpreadsOnOutputSheets(
     for (let slotIndex = 0; slotIndex < sheetLayout.capacity; slotIndex += 1) {
       const frontSpread = embeddedSpreads[baseIndex + slotIndex * 2];
       const backSpread = embeddedSpreads[baseIndex + slotIndex * 2 + 1];
-      const slot = getSheetSlot(sheetLayout, slotIndex);
+      const frontSlot = getSheetSlot(sheetLayout, slotIndex);
+      const backSlot = getSheetSlot(sheetLayout, slotIndex, flipAxis);
 
       if (frontSpread) {
-        drawPackedSpread(frontSheet, frontSpread, slot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
-        drawTrimMarks(frontSheet, slot.x, slot.y, slot.width, slot.height);
+        drawPackedSpread(frontSheet, frontSpread, frontSlot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
+        drawTrimMarks(frontSheet, frontSlot.x, frontSlot.y, frontSlot.width, frontSlot.height);
       }
 
       if (backSpread) {
-        drawPackedSpread(backSheet, backSpread, slot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
-        drawTrimMarks(backSheet, slot.x, slot.y, slot.width, slot.height);
+        drawPackedSpread(backSheet, backSpread, backSlot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
+        drawTrimMarks(backSheet, backSlot.x, backSlot.y, backSlot.width, backSlot.height);
       }
     }
   }
@@ -264,9 +281,11 @@ function drawTrimMarks(sheet: PDFPage, trimX: number, trimY: number, trimWidth: 
   });
 }
 
-function getSheetSlot(sheetLayout: SheetLayout, slotIndex: number): SlotRect {
-  const column = slotIndex % sheetLayout.columns;
-  const row = Math.floor(slotIndex / sheetLayout.columns);
+function getSheetSlot(sheetLayout: SheetLayout, slotIndex: number, flipAxis?: FlipAxis): SlotRect {
+  const sourceColumn = slotIndex % sheetLayout.columns;
+  const sourceRow = Math.floor(slotIndex / sheetLayout.columns);
+  const column = flipAxis === "vertical" ? sheetLayout.columns - 1 - sourceColumn : sourceColumn;
+  const row = flipAxis === "horizontal" ? sheetLayout.rows - 1 - sourceRow : sourceRow;
   const visualRow = sheetLayout.rows - 1 - row;
 
   return {
@@ -275,6 +294,32 @@ function getSheetSlot(sheetLayout: SheetLayout, slotIndex: number): SlotRect {
     width: sheetLayout.spreadWidth,
     height: sheetLayout.spreadHeight,
   };
+}
+
+function resolveDuplexFlipEdge(
+  selection: DuplexFlipSelection,
+  outputWidth: number,
+  outputHeight: number,
+): DuplexFlipEdge {
+  if (selection === "long-edge" || selection === "short-edge") {
+    return selection;
+  }
+
+  return outputHeight >= outputWidth ? "long-edge" : "short-edge";
+}
+
+function resolveFlipAxis(edge: DuplexFlipEdge, outputWidth: number, outputHeight: number): FlipAxis {
+  const isPortrait = outputHeight >= outputWidth;
+
+  if (edge === "long-edge") {
+    return isPortrait ? "vertical" : "horizontal";
+  }
+
+  return isPortrait ? "horizontal" : "vertical";
+}
+
+function shouldSwapBackSpreadPages(flipAxis: FlipAxis, spreadRotation: 0 | 90): boolean {
+  return (flipAxis === "horizontal") !== (spreadRotation === 90);
 }
 
 function drawPackedSpread(

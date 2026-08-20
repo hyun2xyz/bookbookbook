@@ -1,6 +1,13 @@
 import "./styles.css";
 
-import { analyzePdfForBooklet, type BookletAnalysis, convertPdfToBooklet, type TrimMarkOptions } from "./pdf-engine";
+import {
+  analyzePdfForBooklet,
+  type BookletAnalysis,
+  convertPdfToBooklet,
+  type DuplexFlipEdge,
+  type DuplexFlipSelection,
+  type TrimMarkOptions,
+} from "./pdf-engine";
 import type { BlankPlacement } from "./imposition";
 import { type PreviewDocument, loadPreviewDocument } from "./preview";
 
@@ -25,6 +32,7 @@ const analysisBox = getElement<HTMLElement>("[data-analysis]");
 const blankPlacementBox = getElement<HTMLFieldSetElement>("[data-blank-placement]");
 const blankPlacementNote = getElement<HTMLElement>("[data-blank-placement-note]");
 const blankPageNumberInput = getElement<HTMLInputElement>("[data-blank-page-number]");
+const duplexFlipSelect = getElement<HTMLSelectElement>("[data-duplex-flip]");
 const paperSizeSelect = getElement<HTMLSelectElement>("[data-paper-size]");
 const paperCustomControls = getElement<HTMLElement>("[data-paper-custom]");
 const paperWidthInput = getElement<HTMLInputElement>("[data-paper-width]");
@@ -127,8 +135,9 @@ form.addEventListener("submit", async (event) => {
     const formData = new FormData(form);
     const binding = formData.get("binding") === "right" ? "right" : "left";
     const blankPlacement = parseBlankPlacement(formData);
+    const duplexFlip = parseDuplexFlip(formData);
     const trimMarks = parseTrimMarks(formData);
-    const result = await convertPdfToBooklet(selectedPdfBytes, { binding, blankPlacement, trimMarks });
+    const result = await convertPdfToBooklet(selectedPdfBytes, { binding, blankPlacement, duplexFlip, trimMarks });
     const outputBuffer = new ArrayBuffer(result.bytes.byteLength);
     new Uint8Array(outputBuffer).set(result.bytes);
     const blob = new Blob([outputBuffer], { type: "application/pdf" });
@@ -145,7 +154,9 @@ form.addEventListener("submit", async (event) => {
         <span>중철 인쇄면</span><strong>${result.summary.printerSpreads}</strong>
         <span>출력 용지 장수</span><strong>${result.summary.outputSheets}</strong>
         <span>한 장당 배치</span><strong>${result.summary.spreadsPerOutputSheet}개</strong>
+        <span>프린터 양면 설정</span><strong>${describeDuplexFlipEdge(result.duplexFlipEdge)}</strong>
       </div>
+      <p class="duplex-print-note">인쇄할 때 프린터에서도 같은 넘김 방향을 선택하세요.</p>
       <a class="download" href="${downloadUrl}" download="${escapeAttribute(outputName)}">PDF 다운로드</a>
     `;
     statusBox.textContent = "변환이 끝났습니다.";
@@ -303,6 +314,7 @@ function resetFormDefaults(): void {
   if (defaultBinding) {
     defaultBinding.checked = true;
   }
+  duplexFlipSelect.value = "auto";
   paperSizeSelect.value = "a4";
   paperWidthInput.value = "450";
   paperHeightInput.value = "640";
@@ -417,6 +429,19 @@ function parseTrimMarks(formData: FormData): TrimMarkOptions | undefined {
     paperWidthMm: preset.width,
     paperHeightMm: preset.height,
   };
+}
+
+function parseDuplexFlip(formData: FormData): DuplexFlipSelection {
+  const value = formData.get("duplexFlip");
+  if (value === "long-edge" || value === "short-edge") {
+    return value;
+  }
+
+  return "auto";
+}
+
+function describeDuplexFlipEdge(edge: DuplexFlipEdge): string {
+  return edge === "long-edge" ? "긴 쪽 넘김" : "짧은 쪽 넘김";
 }
 
 function parsePaperDimension(value: FormDataEntryValue | null, label: string): number {
