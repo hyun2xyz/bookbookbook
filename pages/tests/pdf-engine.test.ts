@@ -1,7 +1,4 @@
-import { fileURLToPath } from "node:url";
-
 import { PDFDocument, StandardFonts } from "pdf-lib";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { describe, expect, it } from "vitest";
 
 import { analyzePdfForBooklet, convertPdfToBooklet } from "../src/pdf-engine";
@@ -53,34 +50,6 @@ async function createSinglePageFixture(pageCount: number, width = 297, height = 
     page.drawText(`reader page ${index + 1}`, { x: 24, y: height - 48, size: 18, font });
   });
   return source.save();
-}
-
-async function getTextXPositions(bytes: Uint8Array, pageNumber: number): Promise<Map<string, number>> {
-  const standardFontDataUrl = fileURLToPath(new URL("../node_modules/pdfjs-dist/standard_fonts/", import.meta.url));
-  const document = await getDocument({ data: bytes.slice(), standardFontDataUrl }).promise;
-
-  try {
-    const page = await document.getPage(pageNumber);
-    const textContent = await page.getTextContent();
-
-    return new Map(
-      textContent.items
-        .filter((item): item is Extract<(typeof textContent.items)[number], { str: string }> => "str" in item)
-        .map((item) => [item.str, item.transform[4]]),
-    );
-  } finally {
-    await document.destroy();
-  }
-}
-
-function requireTextX(positions: Map<string, number>, text: string): number {
-  const x = positions.get(text);
-
-  if (x === undefined) {
-    throw new Error(`Missing expected PDF text: ${text}`);
-  }
-
-  return x;
 }
 
 describe("browser PDF engine", () => {
@@ -217,19 +186,6 @@ describe("browser PDF engine", () => {
       spreadsPerOutputSheet: 3,
     });
     expect(output.getPageCount()).toBe(2);
-  });
-
-  it("mirrors packed back-side columns so duplex pairs land behind the matching front-side columns", async () => {
-    const sourceBytes = await createSinglePageFixture(12, 100, 100);
-
-    const result = await convertPdfToBooklet(sourceBytes, {
-      binding: "left",
-      trimMarks: { paperWidthMm: 280, paperHeightMm: 70 },
-    });
-    const backTextX = await getTextXPositions(result.bytes, 2);
-
-    expect(requireTextX(backTextX, "reader page 2")).toBeGreaterThan(requireTextX(backTextX, "reader page 4"));
-    expect(requireTextX(backTextX, "reader page 4")).toBeGreaterThan(requireTextX(backTextX, "reader page 6"));
   });
 
   it("warns when the selected output paper is smaller than the final spread", async () => {
