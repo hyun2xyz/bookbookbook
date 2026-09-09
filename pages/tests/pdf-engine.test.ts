@@ -89,6 +89,24 @@ function requireTextPosition(positions: Map<string, TextPosition>, text: string)
 }
 
 describe("browser PDF engine", () => {
+  it("places pages with shifted media origins without copying the hidden left half", async () => {
+    const source = await PDFDocument.create();
+    const font = await source.embedFont(StandardFonts.Helvetica);
+    for (let index = 0; index < 4; index += 1) {
+      const page = source.addPage([840, 595]);
+      page.drawText("hidden", { x: 24, y: 500, font });
+      page.drawText(`visible ${index + 1}`, { x: 444, y: 540, font });
+      page.setMediaBox(420, 40, 420, 555);
+      page.setCropBox(420, 40, 420, 555);
+    }
+    const result = await convertPdfToBooklet(await source.save(), { binding: "left" });
+    const positions = await getTextPositions(result.bytes, 1);
+    expect(requireTextPosition(positions, "visible 4").x).toBeCloseTo(24);
+    expect(requireTextPosition(positions, "visible 1").x).toBeCloseTo(444);
+    expect(requireTextPosition(positions, "visible 1").y).toBeCloseTo(500);
+    expect(result.summary.outputSheets).toBe(1);
+  });
+
   it("splits spreads, pads before the back cover, and emits printer-spread PDF bytes", async () => {
     const sourceBytes = await createReaderSpreadFixture();
 
@@ -103,7 +121,7 @@ describe("browser PDF engine", () => {
       readerPagesAfterPadding: 8,
       blankPagesAdded: 2,
       printerSpreads: 4,
-      outputSheets: 4,
+      outputSheets: 2,
       spreadsPerOutputSheet: 1,
     });
     expect(output.getPageCount()).toBe(4);
@@ -118,7 +136,7 @@ describe("browser PDF engine", () => {
 
     const output = await PDFDocument.load(result.bytes);
     expect(result.summary.printerSpreads).toBe(4);
-    expect(result.summary.outputSheets).toBe(4);
+    expect(result.summary.outputSheets).toBe(2);
     expect(result.summary.spreadsPerOutputSheet).toBe(1);
     expect(output.getPage(0).getWidth()).toBeCloseTo(840);
     expect(output.getPage(0).getHeight()).toBeCloseTo(595);
@@ -136,7 +154,7 @@ describe("browser PDF engine", () => {
       readerPagesAfterPadding: 4,
       blankPagesAdded: 0,
       printerSpreads: 2,
-      outputSheets: 2,
+      outputSheets: 1,
       spreadsPerOutputSheet: 1,
     });
     expect(output.getPageCount()).toBe(2);
@@ -156,7 +174,7 @@ describe("browser PDF engine", () => {
       readerPagesAfterPadding: 4,
       blankPagesAdded: 0,
       printerSpreads: 2,
-      outputSheets: 2,
+      outputSheets: 1,
       spreadsPerOutputSheet: 1,
     });
     expect(output.getPageCount()).toBe(2);
@@ -176,7 +194,7 @@ describe("browser PDF engine", () => {
     const firstPage = output.getPage(0);
     expect(firstPage.getWidth()).toBeCloseTo((420 * 72) / 25.4);
     expect(firstPage.getHeight()).toBeCloseTo((297 * 72) / 25.4);
-    expect(result.summary.outputSheets).toBe(4);
+    expect(result.summary.outputSheets).toBe(2);
     expect(result.summary.spreadsPerOutputSheet).toBe(1);
   });
 
@@ -195,7 +213,7 @@ describe("browser PDF engine", () => {
       readerPagesAfterPadding: 8,
       blankPagesAdded: 0,
       printerSpreads: 4,
-      outputSheets: 2,
+      outputSheets: 1,
       spreadsPerOutputSheet: 2,
     });
     expect(output.getPageCount()).toBe(2);
@@ -218,7 +236,7 @@ describe("browser PDF engine", () => {
       readerPagesAfterPadding: 12,
       blankPagesAdded: 0,
       printerSpreads: 6,
-      outputSheets: 2,
+      outputSheets: 1,
       spreadsPerOutputSheet: 3,
     });
     expect(output.getPageCount()).toBe(2);
@@ -358,7 +376,7 @@ describe("browser PDF engine", () => {
       readerPagesAfterPadding: 8,
       blankPagesAdded: 2,
       printerSpreads: 4,
-      outputSheets: 4,
+      outputSheets: 2,
       spreadsPerOutputSheet: 1,
       detectedPdfShape: "mixed-pages-and-spreads",
       recommendedBlankPlacement: "before-back-cover",

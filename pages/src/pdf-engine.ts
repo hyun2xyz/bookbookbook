@@ -124,7 +124,7 @@ export async function convertPdfToBooklet(
     ? await packPrinterSpreadsOnOutputSheets(bookletBytes, trimWidth, trimHeight, sheetLayout, flipAxis)
     : {
         bytes: bookletBytes,
-        outputSheets: printerPairs.length,
+        outputSheets: printerPairs.length / 2,
         spreadsPerOutputSheet: 1,
       };
 
@@ -183,7 +183,7 @@ async function packPrinterSpreadsOnOutputSheets(
 
   return {
     bytes: await outputDoc.save(),
-    outputSheets: outputDoc.getPageCount(),
+    outputSheets: outputDoc.getPageCount() / 2,
     spreadsPerOutputSheet: sheetLayout.capacity,
   };
 }
@@ -365,7 +365,7 @@ export async function analyzePdfForBooklet(inputBytes: Uint8Array | ArrayBuffer)
     readerPagesAfterPadding: paddedSlots.length,
     blankPagesAdded: paddedSlots.length - layout.slots.length,
     printerSpreads: buildPrinterPairs(paddedSlots.length).length,
-    outputSheets: buildPrinterPairs(paddedSlots.length).length,
+    outputSheets: buildPrinterPairs(paddedSlots.length).length / 2,
     spreadsPerOutputSheet: 1,
     detectedPdfShape: detectPdfShape(layout.slots),
     recommendedBlankPlacement: "before-back-cover",
@@ -403,15 +403,16 @@ async function embedLogicalPage(
   const sourcePage = sourcePages[slot.sourceIndex];
   const sourceWidth = sourcePage.getWidth();
   const sourceHeight = sourcePage.getHeight();
+  const { x: sourceX, y: sourceY } = sourcePage.getMediaBox();
   const halfWidth = sourceWidth / 2;
 
   if (slot.part === "left") {
     return {
       page: await outputDoc.embedPage(sourcePage, {
-        left: 0,
-        bottom: 0,
-        right: halfWidth,
-        top: sourceHeight,
+        left: sourceX,
+        bottom: sourceY,
+        right: sourceX + halfWidth,
+        top: sourceY + sourceHeight,
       }),
       width: halfWidth,
       height: sourceHeight,
@@ -421,10 +422,10 @@ async function embedLogicalPage(
   if (slot.part === "right") {
     return {
       page: await outputDoc.embedPage(sourcePage, {
-        left: halfWidth,
-        bottom: 0,
-        right: sourceWidth,
-        top: sourceHeight,
+        left: sourceX + halfWidth,
+        bottom: sourceY,
+        right: sourceX + sourceWidth,
+        top: sourceY + sourceHeight,
       }),
       width: halfWidth,
       height: sourceHeight,
@@ -433,10 +434,10 @@ async function embedLogicalPage(
 
   return {
     page: await outputDoc.embedPage(sourcePage, {
-      left: 0,
-      bottom: 0,
-      right: sourceWidth,
-      top: sourceHeight,
+      left: sourceX,
+      bottom: sourceY,
+      right: sourceX + sourceWidth,
+      top: sourceY + sourceHeight,
     }),
     width: sourceWidth,
     height: sourceHeight,
