@@ -4,10 +4,9 @@ import {
   analyzeReaderLayout,
   type Binding,
   type BlankPlacement,
+  type PageSize,
   type SourceSlot,
   buildPrinterPairs,
-  buildReaderSlots,
-  inferSinglePageSize,
   padSlotsForSaddleStitch,
 } from "./imposition";
 
@@ -26,6 +25,8 @@ export type DetectedPdfShape = "single-pages" | "all-spreads" | "mixed-pages-and
 export interface BookletAnalysis extends ConversionSummary {
   detectedPdfShape: DetectedPdfShape;
   recommendedBlankPlacement: BlankPlacement;
+  /** 1-based source PDF page numbers that are scaled to fit because their size differs from the booklet page. */
+  mismatchedSourcePages: number[];
 }
 
 export interface ConvertOptions {
@@ -38,6 +39,8 @@ export interface ConvertOptions {
 export interface ConvertResult {
   bytes: Uint8Array;
   duplexFlipEdge: DuplexFlipEdge;
+  /** Back sides are printed upside down so they come out upright after this duplex flip. */
+  backSidesTurned: boolean;
   summary: ConversionSummary;
 }
 
@@ -53,7 +56,16 @@ interface LogicalPage {
   page: PDFEmbeddedPage;
   width: number;
   height: number;
+  /** Extra source width embedded past the page's right edge, from the other half of its source spread. */
+  foldBleed: number;
 }
+
+/**
+ * How a left-hand page tucks under its right-hand neighbour at the fold:
+ * - "bleed": a left half of a source spread also carries the start of the other half, so nothing moves.
+ * - "stretch": a single page has nothing past its edge, so it is stretched by FOLD_OVERLAP instead.
+ */
+type FoldOverlap = { kind: "none" } | { kind: "bleed"; sourceWidth: number } | { kind: "stretch" };
 
 interface SheetLayout {
   width: number;
@@ -78,10 +90,14 @@ interface SlotRect {
 }
 
 type FlipAxis = "vertical" | "horizontal";
+type SpreadRotation = 0 | 90 | 180 | 270;
 
 const MIN_TRIM_MARK_MARGIN = millimetersToPoints(11);
 const TRIM_MARK_GAP = millimetersToPoints(2);
 const TRIM_MARK_LENGTH = millimetersToPoints(9);
+// Two pages that merely touch at the fold show a hairline seam in PDF viewers (anti-aliasing on the shared edge).
+// The left page slips this far under the right page instead; the overlap disappears into the fold when printed.
+const FOLD_OVERLAP = 1;
 
 export async function convertPdfToBooklet(
   inputBytes: Uint8Array | ArrayBuffer,
@@ -93,12 +109,24 @@ export async function convertPdfToBooklet(
     width: page.getWidth(),
     height: page.getHeight(),
   }));
-  const readerSlots = buildReaderSlots(pageSizes);
+  const { slots: readerSlots, singlePage } = analyzeReaderLayout(pageSizes, options.binding);
   const paddedSlots = padSlotsForSaddleStitch(readerSlots, options.blankPlacement);
-  const singlePage = inferSinglePageSize(pageSizes);
   const outputDoc = await PDFDocument.create();
-  const logicalPages = await Promise.all(paddedSlots.map((slot) => embedLogicalPage(outputDoc, sourcePages, slot)));
-  const printerPairs = buildPrinterPairs(logicalPages.length, options.binding);
+  const printerPairs = buildPrinterPairs(paddedSlots.length, options.binding);
+  const foldOverlaps = resolveFoldOverlaps(printerPairs, paddedSlots, pageSizes, singlePage);
+  const wholeSpreadSlots = new Set(
+    printerPairs.flatMap(([leftNumber, rightNumber]) =>
+      isWholeSourceSpread(paddedSlots[leftNumber - 1], paddedSlots[rightNumber - 1]) ? [leftNumber - 1, rightNumber - 1] : [],
+    ),
+  );
+  const logicalPages = await Promise.all(
+    paddedSlots.map((slot, index) => {
+      const overlap = foldOverlaps[index];
+      return wholeSpreadSlots.has(index)
+        ? null
+        : embedLogicalPage(outputDoc, sourcePages, slot, overlap.kind === "bleed" ? overlap.sourceWidth : 0);
+    }),
+  );
   const trimWidth = singlePage.width * 2;
   const trimHeight = singlePage.height;
   const sheetLayout = options.trimMarks ? resolveSheetLayout(options.trimMarks, trimWidth, trimHeight) : undefined;
@@ -107,23 +135,38 @@ export async function convertPdfToBooklet(
   const duplexFlipEdge = resolveDuplexFlipEdge(options.duplexFlip ?? "auto", outputWidth, outputHeight);
   const flipAxis = resolveFlipAxis(duplexFlipEdge, outputWidth, outputHeight);
   const spreadRotation = sheetLayout?.spreadRotation ?? 0;
-  const swapBackSpreadPages = shouldSwapBackSpreadPages(flipAxis, spreadRotation);
+  const turnBacksUpsideDown = shouldTurnBacksUpsideDown(flipAxis, spreadRotation);
 
-  printerPairs.forEach((pair, pairIndex) => {
-    const [leftNumber, rightNumber] = pairIndex % 2 === 1 && swapBackSpreadPages ? [pair[1], pair[0]] : pair;
+  for (const [leftNumber, rightNumber] of printerPairs) {
     const sheet = outputDoc.addPage([trimWidth, trimHeight]);
-    const leftPage = logicalPages[leftNumber - 1];
-    const rightPage = logicalPages[rightNumber - 1];
+    const leftSlot = paddedSlots[leftNumber - 1];
+    const rightSlot = paddedSlots[rightNumber - 1];
 
-    drawLogicalPage(sheet, leftPage, 0, 0, singlePage.width, singlePage.height);
-    drawLogicalPage(sheet, rightPage, singlePage.width, 0, singlePage.width, singlePage.height);
-  });
+    const sourceSpread = isWholeSourceSpread(leftSlot, rightSlot)
+      ? await embedLogicalPage(outputDoc, sourcePages, { sourceIndex: leftSlot.sourceIndex, part: "full" })
+      : null;
+
+    if (sourceSpread) {
+      // The centre spread can come from one source spread: draw it whole so the fold has no seam or lost sliver.
+      drawPage(sheet, sourceSpread, fitPage(sourceSpread, 0, 0, trimWidth, trimHeight));
+      continue;
+    }
+
+    drawPagePair(
+      sheet,
+      logicalPages[leftNumber - 1],
+      logicalPages[rightNumber - 1],
+      singlePage.width,
+      singlePage.height,
+      foldOverlaps[leftNumber - 1],
+    );
+  }
 
   const bookletBytes = await outputDoc.save();
   const packedOutput = sheetLayout
-    ? await packPrinterSpreadsOnOutputSheets(bookletBytes, trimWidth, trimHeight, sheetLayout, flipAxis)
+    ? await packPrinterSpreadsOnOutputSheets(bookletBytes, trimWidth, trimHeight, sheetLayout, flipAxis, turnBacksUpsideDown)
     : {
-        bytes: bookletBytes,
+        bytes: turnBacksUpsideDown ? await turnBackSpreadsUpsideDown(bookletBytes, trimWidth, trimHeight) : bookletBytes,
         outputSheets: printerPairs.length / 2,
         spreadsPerOutputSheet: 1,
       };
@@ -131,6 +174,7 @@ export async function convertPdfToBooklet(
   return {
     bytes: packedOutput.bytes,
     duplexFlipEdge,
+    backSidesTurned: turnBacksUpsideDown,
     summary: {
       originalPdfPages: sourcePages.length,
       readerPagesBeforePadding: readerSlots.length,
@@ -149,6 +193,7 @@ async function packPrinterSpreadsOnOutputSheets(
   spreadHeight: number,
   sheetLayout: SheetLayout,
   flipAxis: FlipAxis,
+  turnBacksUpsideDown: boolean,
 ): Promise<{ bytes: Uint8Array; outputSheets: number; spreadsPerOutputSheet: number }> {
   const sourceDoc = await PDFDocument.load(bookletBytes);
   const sourcePages = sourceDoc.getPages();
@@ -158,6 +203,8 @@ async function packPrinterSpreadsOnOutputSheets(
     sourcePages.map((_page, index) => index),
   );
   const pairSpan = sheetLayout.capacity * 2;
+  const frontRotation = sheetLayout.spreadRotation;
+  const backRotation = turnBacksUpsideDown ? ((frontRotation + 180) as SpreadRotation) : frontRotation;
 
   for (let baseIndex = 0; baseIndex < embeddedSpreads.length; baseIndex += pairSpan) {
     const frontSheet = outputDoc.addPage([sheetLayout.width, sheetLayout.height]);
@@ -170,12 +217,12 @@ async function packPrinterSpreadsOnOutputSheets(
       const backSlot = getSheetSlot(sheetLayout, slotIndex, flipAxis);
 
       if (frontSpread) {
-        drawPackedSpread(frontSheet, frontSpread, frontSlot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
+        drawPackedSpread(frontSheet, frontSpread, frontSlot, spreadWidth, spreadHeight, frontRotation);
         drawTrimMarks(frontSheet, frontSlot.x, frontSlot.y, frontSlot.width, frontSlot.height);
       }
 
       if (backSpread) {
-        drawPackedSpread(backSheet, backSpread, backSlot, spreadWidth, spreadHeight, sheetLayout.spreadRotation);
+        drawPackedSpread(backSheet, backSpread, backSlot, spreadWidth, spreadHeight, backRotation);
         drawTrimMarks(backSheet, backSlot.x, backSlot.y, backSlot.width, backSlot.height);
       }
     }
@@ -318,8 +365,23 @@ function resolveFlipAxis(edge: DuplexFlipEdge, outputWidth: number, outputHeight
   return isPortrait ? "horizontal" : "vertical";
 }
 
-function shouldSwapBackSpreadPages(flipAxis: FlipAxis, spreadRotation: 0 | 90): boolean {
+// Turning a folded leaf keeps each page's "up" the same on both sides. When the printer's turn axis runs across the
+// pages' up direction (e.g. long-edge on a landscape sheet), the back comes out upside down unless it is turned 180°.
+function shouldTurnBacksUpsideDown(flipAxis: FlipAxis, spreadRotation: 0 | 90): boolean {
   return (flipAxis === "horizontal") !== (spreadRotation === 90);
+}
+
+async function turnBackSpreadsUpsideDown(bookletBytes: Uint8Array, width: number, height: number): Promise<Uint8Array> {
+  const sourceDoc = await PDFDocument.load(bookletBytes);
+  const outputDoc = await PDFDocument.create();
+  const spreads = await outputDoc.embedPdf(bookletBytes, sourceDoc.getPageIndices());
+
+  spreads.forEach((spread, index) => {
+    const sheet = outputDoc.addPage([width, height]);
+    drawPackedSpread(sheet, spread, { x: 0, y: 0, width, height }, width, height, index % 2 === 1 ? 180 : 0);
+  });
+
+  return outputDoc.save();
 }
 
 function drawPackedSpread(
@@ -328,24 +390,21 @@ function drawPackedSpread(
   slot: SlotRect,
   spreadWidth: number,
   spreadHeight: number,
-  rotation: 0 | 90,
+  rotation: SpreadRotation,
 ): void {
-  if (rotation === 90) {
-    sheet.drawPage(spread, {
-      x: slot.x + slot.width,
-      y: slot.y,
-      width: spreadWidth,
-      height: spreadHeight,
-      rotate: degrees(90),
-    });
-    return;
-  }
+  // pdf-lib rotates counter-clockwise around (x, y), so pick the slot corner that keeps the turned spread inside it.
+  const origin = {
+    0: { x: slot.x, y: slot.y },
+    90: { x: slot.x + slot.width, y: slot.y },
+    180: { x: slot.x + slot.width, y: slot.y + slot.height },
+    270: { x: slot.x, y: slot.y + slot.height },
+  }[rotation];
 
   sheet.drawPage(spread, {
-    x: slot.x,
-    y: slot.y,
+    ...origin,
     width: spreadWidth,
     height: spreadHeight,
+    rotate: degrees(rotation),
   });
 }
 
@@ -369,6 +428,7 @@ export async function analyzePdfForBooklet(inputBytes: Uint8Array | ArrayBuffer)
     spreadsPerOutputSheet: 1,
     detectedPdfShape: detectPdfShape(layout.slots),
     recommendedBlankPlacement: "before-back-cover",
+    mismatchedSourcePages: layout.mismatchedSourceIndexes.map((index) => index + 1),
   };
 }
 
@@ -391,6 +451,7 @@ async function embedLogicalPage(
   outputDoc: PDFDocument,
   sourcePages: PDFPage[],
   slot: SourceSlot,
+  foldBleed = 0,
 ): Promise<LogicalPage | null> {
   if (slot.part === "blank") {
     return null;
@@ -411,11 +472,12 @@ async function embedLogicalPage(
       page: await outputDoc.embedPage(sourcePage, {
         left: sourceX,
         bottom: sourceY,
-        right: sourceX + halfWidth,
+        right: sourceX + halfWidth + foldBleed,
         top: sourceY + sourceHeight,
       }),
       width: halfWidth,
       height: sourceHeight,
+      foldBleed,
     };
   }
 
@@ -429,6 +491,7 @@ async function embedLogicalPage(
       }),
       width: halfWidth,
       height: sourceHeight,
+      foldBleed: 0,
     };
   }
 
@@ -441,29 +504,103 @@ async function embedLogicalPage(
     }),
     width: sourceWidth,
     height: sourceHeight,
+    foldBleed: 0,
   };
 }
 
-function drawLogicalPage(
+function isWholeSourceSpread(
+  leftSlot: SourceSlot,
+  rightSlot: SourceSlot,
+): leftSlot is SourceSlot & { sourceIndex: number } {
+  return (
+    leftSlot.sourceIndex !== null &&
+    leftSlot.sourceIndex === rightSlot.sourceIndex &&
+    leftSlot.part === "left" &&
+    rightSlot.part === "right"
+  );
+}
+
+function drawPagePair(
   sheet: PDFPage,
-  logicalPage: LogicalPage | null,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
+  leftPage: LogicalPage | null,
+  rightPage: LogicalPage | null,
+  pageWidth: number,
+  pageHeight: number,
+  leftOverlap: FoldOverlap,
 ): void {
-  if (!logicalPage) {
-    return;
+  if (leftPage) {
+    const rect = fitPage(leftPage, 0, 0, pageWidth, pageHeight);
+    const scale = rect.width / leftPage.width;
+    const width = leftOverlap.kind === "stretch" ? rect.width + FOLD_OVERLAP : rect.width + leftPage.foldBleed * scale;
+    drawPage(sheet, leftPage, { ...rect, width });
   }
 
+  if (rightPage) {
+    drawPage(sheet, rightPage, fitPage(rightPage, pageWidth, 0, pageWidth, pageHeight));
+  }
+}
+
+function resolveFoldOverlaps(
+  printerPairs: [number, number][],
+  slots: SourceSlot[],
+  pageSizes: PageSize[],
+  singlePage: PageSize,
+): FoldOverlap[] {
+  const overlaps: FoldOverlap[] = slots.map(() => ({ kind: "none" }));
+
+  for (const [leftNumber, rightNumber] of printerPairs) {
+    const leftSlot = slots[leftNumber - 1];
+    const rightSlot = slots[rightNumber - 1];
+    const leftSize = getLogicalPageSize(leftSlot, pageSizes);
+    const rightSize = getLogicalPageSize(rightSlot, pageSizes);
+
+    // Overlap only where two pages actually meet at the fold; next to a blank or letterboxed page it would show.
+    if (
+      isWholeSourceSpread(leftSlot, rightSlot) ||
+      !leftSize ||
+      !rightSize ||
+      !reachesFold(leftSize, singlePage) ||
+      !reachesFold(rightSize, singlePage)
+    ) {
+      continue;
+    }
+
+    overlaps[leftNumber - 1] =
+      leftSlot.part === "left"
+        ? { kind: "bleed", sourceWidth: (FOLD_OVERLAP * leftSize.width) / singlePage.width }
+        : { kind: "stretch" };
+  }
+
+  return overlaps;
+}
+
+function getLogicalPageSize(slot: SourceSlot, pageSizes: PageSize[]): PageSize | null {
+  if (slot.sourceIndex === null || slot.part === "blank") {
+    return null;
+  }
+
+  const size = pageSizes[slot.sourceIndex];
+  return slot.part === "full" ? size : { width: size.width / 2, height: size.height };
+}
+
+function reachesFold(size: PageSize, singlePage: PageSize): boolean {
+  // A page reaches the fold when fitting it into the booklet page is limited by width, not height.
+  return singlePage.width / size.width <= (singlePage.height / size.height) * (1 + 1e-6);
+}
+
+function fitPage(logicalPage: LogicalPage, x: number, y: number, width: number, height: number): SlotRect {
   const scale = Math.min(width / logicalPage.width, height / logicalPage.height);
   const drawWidth = logicalPage.width * scale;
   const drawHeight = logicalPage.height * scale;
 
-  sheet.drawPage(logicalPage.page, {
+  return {
     x: x + (width - drawWidth) / 2,
     y: y + (height - drawHeight) / 2,
     width: drawWidth,
     height: drawHeight,
-  });
+  };
+}
+
+function drawPage(sheet: PDFPage, logicalPage: LogicalPage, rect: SlotRect): void {
+  sheet.drawPage(logicalPage.page, rect);
 }

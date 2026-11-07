@@ -14,36 +14,85 @@ export interface SourceSlot {
 }
 
 export interface ReaderLayout {
+  /** Booklet page size: the most common logical page size in the PDF. */
   singlePage: PageSize;
   slots: SourceSlot[];
+  /** Source page indexes whose logical page size differs from `singlePage`. */
+  mismatchedSourceIndexes: number[];
 }
 
 const SPREAD_WIDTH_MULTIPLIER = 1.5;
 const SPREAD_MIN_ASPECT_RATIO = 1.33;
 const SPREAD_MAX_ASPECT_RATIO = 1.67;
 
-export function buildReaderSlots(pageSizes: PageSize[]): SourceSlot[] {
-  return analyzeReaderLayout(pageSizes).slots;
+export function buildReaderSlots(pageSizes: PageSize[], binding: Binding = "left"): SourceSlot[] {
+  return analyzeReaderLayout(pageSizes, binding).slots;
 }
 
-export function analyzeReaderLayout(pageSizes: PageSize[]): ReaderLayout {
+export function analyzeReaderLayout(pageSizes: PageSize[], binding: Binding = "left"): ReaderLayout {
   if (pageSizes.length === 0) {
     throw new Error("PDF has no pages");
   }
 
-  const singlePage = inferSinglePageSize(pageSizes);
-  const slots: SourceSlot[] = [];
+  const splitReference = inferSplitReferenceSize(pageSizes);
+  const splitPages = pageSizes.map(
+    (size) => size.width >= splitReference.width * SPREAD_WIDTH_MULTIPLIER && isSpreadLikeAspectRatio(size),
+  );
+  const logicalSizes = pageSizes.map((size, index) =>
+    splitPages[index] ? { width: size.width / 2, height: size.height } : size,
+  );
+  const singlePage = pickDominantPageSize(logicalSizes, splitPages);
+  const singlePageKey = pageSizeKey(singlePage);
 
-  pageSizes.forEach((size, index) => {
-    if (size.width >= singlePage.width * SPREAD_WIDTH_MULTIPLIER && isSpreadLikeAspectRatio(size)) {
-      slots.push({ sourceIndex: index, part: "left" });
-      slots.push({ sourceIndex: index, part: "right" });
-    } else {
-      slots.push({ sourceIndex: index, part: "full" });
-    }
+  return {
+    singlePage,
+    slots: orderReaderSlots(splitPages, binding),
+    mismatchedSourceIndexes: logicalSizes.flatMap((size, index) => (pageSizeKey(size) === singlePageKey ? [] : [index])),
+  };
+}
+
+function orderReaderSlots(splitPages: boolean[], binding: Binding): SourceSlot[] {
+  // A reader spread shows the earlier page on the left for left binding and on the right for right binding.
+  const [earlierHalf, laterHalf] = binding === "right" ? (["right", "left"] as const) : (["left", "right"] as const);
+  const slots = splitPages.flatMap((isSpread, index): SourceSlot[] =>
+    isSpread
+      ? [
+          { sourceIndex: index, part: earlierHalf },
+          { sourceIndex: index, part: laterHalf },
+        ]
+      : [{ sourceIndex: index, part: "full" }],
+  );
+
+  if (!splitPages.every(Boolean)) {
+    return slots;
+  }
+
+  // A spread-only PDF has no single front-cover page, so its first spread is the outside cover:
+  // [back | front] for left binding and [front | back] for right binding. The rest are reader spreads.
+  const [backCover, frontCover, ...insidePages] = slots;
+  return [frontCover, ...insidePages, backCover];
+}
+
+function pickDominantPageSize(logicalSizes: PageSize[], splitPages: boolean[]): PageSize {
+  const groups = new Map<string, { size: PageSize; count: number }>();
+
+  logicalSizes.forEach((size, index) => {
+    const key = pageSizeKey(size);
+    const group = groups.get(key) ?? { size, count: 0 };
+    group.count += splitPages[index] ? 2 : 1;
+    groups.set(key, group);
   });
 
-  return { singlePage, slots };
+  // Most pages wins; ties prefer the larger page so nothing is shrunk to fit an odd small page.
+  const [dominant] = [...groups.values()].sort(
+    (a, b) => b.count - a.count || b.size.width * b.size.height - a.size.width * a.size.height,
+  );
+  return { width: dominant.size.width, height: dominant.size.height };
+}
+
+function pageSizeKey(size: PageSize): string {
+  // Group sizes within about 1pt so rounding noise from PDF exporters does not split one page size in two.
+  return `${Math.round(size.width)}x${Math.round(size.height)}`;
 }
 
 export function padSlotsForSaddleStitch(
@@ -112,10 +161,12 @@ export function buildPrinterPairs(totalPages: number, binding: Binding = "left")
 }
 
 export function inferSinglePageSize(pageSizes: PageSize[]): PageSize {
-  if (pageSizes.length === 0) {
-    throw new Error("PDF has no pages");
-  }
+  return analyzeReaderLayout(pageSizes).singlePage;
+}
 
+// The narrowest single page tells which wider pages are two-page spreads. It is not the booklet page size:
+// a cover exported at a different size must not shrink every other page (see pickDominantPageSize).
+function inferSplitReferenceSize(pageSizes: PageSize[]): PageSize {
   const smallestWidth = Math.min(...pageSizes.map((size) => size.width));
 
   if (smallestWidth <= 0) {

@@ -4,6 +4,7 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { describe, expect, it } from "vitest";
 
+import { buildPrinterPairs } from "../src/imposition";
 import { analyzePdfForBooklet, convertPdfToBooklet } from "../src/pdf-engine";
 
 async function createReaderSpreadFixture(): Promise<Uint8Array> {
@@ -88,6 +89,122 @@ function requireTextPosition(positions: Map<string, TextPosition>, text: string)
   return position;
 }
 
+async function createCenterLabelFixture(pageCount: number, width: number, height: number): Promise<Uint8Array> {
+  const source = await PDFDocument.create();
+  const font = await source.embedFont(StandardFonts.Helvetica);
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    source.addPage([width, height]).drawText(`P${pageNumber}`, { x: width / 2, y: height / 2, size: 8, font });
+  }
+  return source.save();
+}
+
+interface LabelPlacement {
+  sheetSide: number;
+  x: number;
+  y: number;
+  upX: number;
+  upY: number;
+}
+
+/**
+ * Finds where each centered `P<n>` label lands on paper. Back sides are mapped into front-side coordinates the way
+ * a duplex printer turns the sheet: long-edge turns around the sheet's long side, short-edge around its short side.
+ */
+async function getPhysicalLabelPlacements(
+  bytes: Uint8Array,
+  flipEdge: "long-edge" | "short-edge",
+): Promise<Map<string, LabelPlacement>> {
+  const standardFontDataUrl = fileURLToPath(new URL("../node_modules/pdfjs-dist/standard_fonts/", import.meta.url));
+  const document = await getDocument({ data: bytes.slice(), standardFontDataUrl }).promise;
+
+  try {
+    const placements = new Map<string, LabelPlacement>();
+
+    for (let sheetSide = 1; sheetSide <= document.numPages; sheetSide += 1) {
+      const page = await document.getPage(sheetSide);
+      const [left, bottom, right, top] = page.view;
+      const width = right - left;
+      const height = top - bottom;
+      const isBack = sheetSide % 2 === 0;
+      const turnsAcrossColumns = (height >= width) === (flipEdge === "long-edge");
+      const textContent = await page.getTextContent();
+
+      for (const item of textContent.items) {
+        if (!("str" in item) || !/^P\d+$/.test(item.str)) {
+          continue;
+        }
+
+        const [, , c, d, x, y] = item.transform;
+        const length = Math.hypot(c, d);
+        const placement = { sheetSide, x, y, upX: c / length, upY: d / length };
+
+        if (isBack && turnsAcrossColumns) {
+          placement.x = width - x;
+          placement.upX = -placement.upX;
+        } else if (isBack) {
+          placement.y = height - y;
+          placement.upY = -placement.upY;
+        }
+
+        placements.set(item.str, placement);
+      }
+    }
+
+    return placements;
+  } finally {
+    await document.destroy();
+  }
+}
+
+function requirePlacement(placements: Map<string, LabelPlacement>, pageNumber: number): LabelPlacement {
+  const placement = placements.get(`P${pageNumber}`);
+
+  if (!placement) {
+    throw new Error(`Missing booklet page P${pageNumber}`);
+  }
+
+  return placement;
+}
+
+function expectFrontSpreadsInReadingOrder(
+  placements: Map<string, LabelPlacement>,
+  pageCount: number,
+  binding: "left" | "right",
+  pageWidth: number,
+): void {
+  buildPrinterPairs(pageCount, binding).forEach(([leftPage, rightPage], pairIndex) => {
+    if (pairIndex % 2 === 1) {
+      return;
+    }
+
+    const left = requirePlacement(placements, leftPage);
+    const right = requirePlacement(placements, rightPage);
+    const readingRightX = left.upY;
+    const readingRightY = -left.upX;
+
+    expect(right.sheetSide).toBe(left.sheetSide);
+    expect(right.upX).toBeCloseTo(left.upX);
+    expect(right.upY).toBeCloseTo(left.upY);
+    // The left page slips 1pt under the right page at the fold, which moves its centre by half that.
+    const distance = (right.x - left.x) * readingRightX + (right.y - left.y) * readingRightY;
+    expect(Math.abs(distance - pageWidth)).toBeLessThan(1);
+  });
+}
+
+function expectLeavesBackToBack(placements: Map<string, LabelPlacement>, pageCount: number): void {
+  for (let recto = 1; recto < pageCount; recto += 2) {
+    const front = requirePlacement(placements, recto);
+    const back = requirePlacement(placements, recto + 1);
+
+    expect(Math.ceil(back.sheetSide / 2), `P${recto + 1} shares a sheet with P${recto}`).toBe(Math.ceil(front.sheetSide / 2));
+    expect(back.sheetSide).not.toBe(front.sheetSide);
+    expect(Math.abs(back.x - front.x), `P${recto + 1} sits behind P${recto}`).toBeLessThan(1);
+    expect(Math.abs(back.y - front.y), `P${recto + 1} sits behind P${recto}`).toBeLessThan(1);
+    expect(back.upX, `P${recto + 1} is upright like P${recto}`).toBeCloseTo(front.upX);
+    expect(back.upY, `P${recto + 1} is upright like P${recto}`).toBeCloseTo(front.upY);
+  }
+}
+
 describe("browser PDF engine", () => {
   it("places pages with shifted media origins without copying the hidden left half", async () => {
     const source = await PDFDocument.create();
@@ -101,7 +218,8 @@ describe("browser PDF engine", () => {
     }
     const result = await convertPdfToBooklet(await source.save(), { binding: "left" });
     const positions = await getTextPositions(result.bytes, 1);
-    expect(requireTextPosition(positions, "visible 4").x).toBeCloseTo(24);
+    // Left pages slip 1pt under the right page at the fold, so their content stretches by a hair.
+    expect(requireTextPosition(positions, "visible 4").x).toBeCloseTo(24, 0);
     expect(requireTextPosition(positions, "visible 1").x).toBeCloseTo(444);
     expect(requireTextPosition(positions, "visible 1").y).toBeCloseTo(500);
     expect(result.summary.outputSheets).toBe(1);
@@ -160,6 +278,77 @@ describe("browser PDF engine", () => {
     expect(output.getPageCount()).toBe(2);
     expect(output.getPage(0).getWidth()).toBeCloseTo(840);
     expect(output.getPage(0).getHeight()).toBeCloseTo(595);
+  });
+
+  it("prints the first page of a spread-only PDF as the outside cover spread", async () => {
+    const source = await PDFDocument.create();
+    const font = await source.embedFont(StandardFonts.Helvetica);
+    for (let index = 1; index <= 2; index += 1) {
+      const page = source.addPage([840, 595]);
+      page.drawText(`s${index}-left`, { x: 24, y: 540, size: 14, font });
+      page.drawText(`s${index}-right`, { x: 444, y: 540, size: 14, font });
+    }
+
+    const result = await convertPdfToBooklet(await source.save(), { binding: "left" });
+    const front = await getTextPositions(result.bytes, 1);
+    const back = await getTextPositions(result.bytes, 2);
+
+    expect(requireTextPosition(front, "s1-left").x).toBeCloseTo(24);
+    expect(requireTextPosition(front, "s1-right").x).toBeCloseTo(444);
+    expect(requireTextPosition(back, "s2-left").x).toBeCloseTo(24);
+    expect(requireTextPosition(back, "s2-right").x).toBeCloseTo(444);
+  });
+
+  it("overlaps facing pages at the fold only when both pages reach it", async () => {
+    const source = await PDFDocument.create();
+    const font = await source.embedFont(StandardFonts.Helvetica);
+    for (let index = 1; index <= 3; index += 1) {
+      source.addPage([200, 300]).drawText(`edge ${index}`, { x: 170, y: 150, size: 6, font });
+    }
+
+    // Three pages become [3 | 1] and [2 | blank]: only the first sheet has two pages meeting at the fold.
+    const result = await convertPdfToBooklet(await source.save(), { binding: "left" });
+    const front = await getTextPositions(result.bytes, 1);
+    const back = await getTextPositions(result.bytes, 2);
+
+    expect(requireTextPosition(front, "edge 3").x).toBeCloseTo((170 * 201) / 200);
+    expect(requireTextPosition(front, "edge 1").x).toBeCloseTo(370);
+    expect(requireTextPosition(back, "edge 2").x).toBeCloseTo(170);
+  });
+
+  it("tucks split spread halves under the fold without moving their content", async () => {
+    const source = await PDFDocument.create();
+    const font = await source.embedFont(StandardFonts.Helvetica);
+    for (let index = 1; index <= 4; index += 1) {
+      const page = source.addPage([840, 595]);
+      page.drawText(`s${index}-left`, { x: 24, y: 540, size: 14, font });
+      page.drawText(`s${index}-gutter`, { x: 330, y: 500, size: 14, font });
+    }
+
+    // Four spreads print as [8 | 1], [2 | 7], [6 | 3], [4 | 5]; page 2 is the left half of spread 2.
+    const result = await convertPdfToBooklet(await source.save(), { binding: "left" });
+    const backOfFirstSheet = await getTextPositions(result.bytes, 2);
+
+    expect(requireTextPosition(backOfFirstSheet, "s2-left").x).toBeCloseTo(24);
+    expect(requireTextPosition(backOfFirstSheet, "s2-gutter").x).toBeCloseTo(330);
+  });
+
+  it("sizes the booklet from the most common page instead of a smaller cover", async () => {
+    const source = await PDFDocument.create();
+    const font = await source.embedFont(StandardFonts.Helvetica);
+    source.addPage([198.425, 283.465]).drawText("cover", { x: 10, y: 250, size: 12, font });
+    for (let index = 2; index <= 16; index += 1) {
+      source.addPage([283.465, 425.197]).drawText(`inside ${index}`, { x: 10, y: 400, size: 12, font });
+    }
+
+    const result = await convertPdfToBooklet(await source.save(), { binding: "left" });
+    const output = await PDFDocument.load(result.bytes);
+    const backOfFirstSheet = await getTextPositions(result.bytes, 2);
+
+    expect(output.getPage(0).getWidth()).toBeCloseTo(566.93);
+    expect(output.getPage(0).getHeight()).toBeCloseTo(425.197);
+    expect(requireTextPosition(backOfFirstSheet, "inside 2").x).toBeCloseTo(10, 1);
+    expect(requireTextPosition(backOfFirstSheet, "inside 15").x).toBeCloseTo(293.465);
   });
 
   it("keeps very wide landscape pages from being split or clipped", async () => {
@@ -242,86 +431,44 @@ describe("browser PDF engine", () => {
     expect(output.getPageCount()).toBe(2);
   });
 
-  it("maps landscape short-edge duplex backs across columns without swapping each spread", async () => {
-    const sourceBytes = await createSinglePageFixture(16, 100, 100);
+  describe("folds into a correct booklet after duplex printing", () => {
+    const layouts = [
+      { name: "landscape spreads without output paper", pageCount: 16, width: 100, height: 100 },
+      { name: "portrait spreads without output paper", pageCount: 16, width: 100, height: 300 },
+      {
+        name: "four spreads on landscape paper",
+        pageCount: 16,
+        width: 100,
+        height: 100,
+        trimMarks: { paperWidthMm: 190, paperHeightMm: 120 },
+      },
+      {
+        name: "two spreads on portrait paper",
+        pageCount: 8,
+        width: 297,
+        height: 420,
+        trimMarks: { paperWidthMm: 297, paperHeightMm: 420 },
+      },
+    ];
+    const cases = layouts.flatMap((layout) =>
+      (["auto", "long-edge", "short-edge"] as const).flatMap((duplexFlip) =>
+        (["left", "right"] as const).map((binding) => ({ ...layout, duplexFlip, binding })),
+      ),
+    );
 
-    const result = await convertPdfToBooklet(sourceBytes, {
-      binding: "left",
-      duplexFlip: "short-edge",
-      trimMarks: { paperWidthMm: 190, paperHeightMm: 120 },
+    it.each(cases)("$name, $duplexFlip, $binding binding", async ({ pageCount, width, height, trimMarks, duplexFlip, binding }) => {
+      const sourceBytes = await createCenterLabelFixture(pageCount, width, height);
+
+      const result = await convertPdfToBooklet(sourceBytes, { binding, duplexFlip, trimMarks });
+      const placements = await getPhysicalLabelPlacements(result.bytes, result.duplexFlipEdge);
+
+      expectFrontSpreadsInReadingOrder(placements, pageCount, binding, width);
+      expectLeavesBackToBack(placements, pageCount);
+      // Automatic flipping picks the book-like edge, so its back sides never need to be printed upside down.
+      if (duplexFlip === "auto") {
+        expect(result.backSidesTurned).toBe(false);
+      }
     });
-    const backText = await getTextPositions(result.bytes, 2);
-    const page2 = requireTextPosition(backText, "reader page 2");
-    const page4 = requireTextPosition(backText, "reader page 4");
-    const page6 = requireTextPosition(backText, "reader page 6");
-    const page8 = requireTextPosition(backText, "reader page 8");
-    const page15 = requireTextPosition(backText, "reader page 15");
-
-    expect(page2.x).toBeGreaterThan(page4.x);
-    expect(page6.x).toBeGreaterThan(page8.x);
-    expect(page2.y).toBeGreaterThan(page6.y);
-    expect(page4.y).toBeGreaterThan(page8.y);
-    expect(page2.x).toBeLessThan(page15.x);
-    expect(result.duplexFlipEdge).toBe("short-edge");
-  });
-
-  it("maps landscape long-edge duplex backs across rows and swaps each spread", async () => {
-    const sourceBytes = await createSinglePageFixture(16, 100, 100);
-
-    const result = await convertPdfToBooklet(sourceBytes, {
-      binding: "left",
-      duplexFlip: "long-edge",
-      trimMarks: { paperWidthMm: 190, paperHeightMm: 120 },
-    });
-    const backText = await getTextPositions(result.bytes, 2);
-    const page2 = requireTextPosition(backText, "reader page 2");
-    const page4 = requireTextPosition(backText, "reader page 4");
-    const page6 = requireTextPosition(backText, "reader page 6");
-    const page8 = requireTextPosition(backText, "reader page 8");
-    const page15 = requireTextPosition(backText, "reader page 15");
-
-    expect(page2.x).toBeLessThan(page4.x);
-    expect(page6.x).toBeLessThan(page8.x);
-    expect(page2.y).toBeLessThan(page6.y);
-    expect(page4.y).toBeLessThan(page8.y);
-    expect(page2.x).toBeGreaterThan(page15.x);
-    expect(result.duplexFlipEdge).toBe("long-edge");
-  });
-
-  it("keeps portrait long-edge duplex backs in matching rows without swapping each spread", async () => {
-    const sourceBytes = await createSinglePageFixture(8);
-
-    const result = await convertPdfToBooklet(sourceBytes, {
-      binding: "left",
-      duplexFlip: "long-edge",
-      trimMarks: { paperWidthMm: 297, paperHeightMm: 420 },
-    });
-    const backText = await getTextPositions(result.bytes, 2);
-    const page2 = requireTextPosition(backText, "reader page 2");
-    const page4 = requireTextPosition(backText, "reader page 4");
-    const page7 = requireTextPosition(backText, "reader page 7");
-
-    expect(page2.y).toBeGreaterThan(page4.y);
-    expect(page2.x).toBeLessThan(page7.x);
-    expect(result.duplexFlipEdge).toBe("long-edge");
-  });
-
-  it("maps portrait short-edge duplex backs across rows and swaps each spread", async () => {
-    const sourceBytes = await createSinglePageFixture(8);
-
-    const result = await convertPdfToBooklet(sourceBytes, {
-      binding: "left",
-      duplexFlip: "short-edge",
-      trimMarks: { paperWidthMm: 297, paperHeightMm: 420 },
-    });
-    const backText = await getTextPositions(result.bytes, 2);
-    const page2 = requireTextPosition(backText, "reader page 2");
-    const page4 = requireTextPosition(backText, "reader page 4");
-    const page7 = requireTextPosition(backText, "reader page 7");
-
-    expect(page2.y).toBeLessThan(page4.y);
-    expect(page2.x).toBeGreaterThan(page7.x);
-    expect(result.duplexFlipEdge).toBe("short-edge");
   });
 
   it("resolves automatic duplex flipping to the upright book-like edge for the final sheet orientation", async () => {
@@ -380,6 +527,19 @@ describe("browser PDF engine", () => {
       spreadsPerOutputSheet: 1,
       detectedPdfShape: "mixed-pages-and-spreads",
       recommendedBlankPlacement: "before-back-cover",
+      mismatchedSourcePages: [],
     });
+  });
+
+  it("reports source pages whose size differs from the booklet page", async () => {
+    const source = await PDFDocument.create();
+    source.addPage([198.425, 283.465]);
+    for (let index = 0; index < 3; index += 1) {
+      source.addPage([283.465, 425.197]);
+    }
+
+    const analysis = await analyzePdfForBooklet(await source.save());
+
+    expect(analysis.mismatchedSourcePages).toEqual([1]);
   });
 });

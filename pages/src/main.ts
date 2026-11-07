@@ -156,7 +156,9 @@ form.addEventListener("submit", async (event) => {
         <span>한 장당 배치</span><strong>${result.summary.spreadsPerOutputSheet}개</strong>
         <span>프린터 양면 설정</span><strong>${describeDuplexFlipEdge(result.duplexFlipEdge)}</strong>
       </div>
-      <p class="duplex-print-note">인쇄할 때 프린터에서도 같은 넘김 방향을 선택하세요.</p>
+      <p class="duplex-print-note">인쇄할 때 프린터에서도 같은 넘김 방향을 선택하세요.${
+        result.backSidesTurned ? " 이 넘김 방향에 맞춰 PDF의 뒷면은 거꾸로 보이는 것이 정상입니다." : ""
+      }</p>
       <a class="download" href="${downloadUrl}" download="${escapeAttribute(outputName)}">PDF 다운로드</a>
     `;
     statusBox.textContent = "변환이 끝났습니다.";
@@ -349,6 +351,11 @@ function renderAnalysis(analysis: BookletAnalysis): void {
       <span>분리 후 책 쪽수</span><strong>${analysis.readerPagesBeforePadding}</strong>
       <span>필요한 빈 페이지</span><strong>${analysis.blankPagesAdded}</strong>
       <span>중철 인쇄면</span><strong>${analysis.printerSpreads}</strong>
+      ${
+        analysis.mismatchedSourcePages.length > 0
+          ? `<span>크기가 다른 원본 쪽</span><strong>${describeMismatchedPages(analysis.mismatchedSourcePages)}</strong>`
+          : ""
+      }
     </div>
   `;
 
@@ -382,10 +389,16 @@ function describeDetectedShape(shape: BookletAnalysis["detectedPdfShape"]): stri
   }
 
   if (shape === "all-spreads") {
-    return "스프레드 PDF";
+    return "스프레드 PDF (첫 쪽 = 표지 펼침면)";
   }
 
   return "페이지와 스프레드가 섞인 PDF";
+}
+
+function describeMismatchedPages(pageNumbers: number[]): string {
+  const shownPages = pageNumbers.slice(0, 5).map((pageNumber) => `${pageNumber}쪽`).join(", ");
+  const hiddenCount = pageNumbers.length - 5;
+  return `${shownPages}${hiddenCount > 0 ? ` 외 ${hiddenCount}쪽` : ""} (판형에 맞춰 조정)`;
 }
 
 function parseBlankPlacement(formData: FormData): BlankPlacement {

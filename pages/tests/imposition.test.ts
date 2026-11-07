@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  analyzeReaderLayout,
   buildPrinterPairs,
   buildReaderSlots,
   inferSinglePageSize,
@@ -26,19 +27,110 @@ describe("browser imposition rules", () => {
     ]);
   });
 
-  it("splits every page when a PDF contains only reader spreads", () => {
+  it("treats the first page of a spread-only PDF as the outside cover spread", () => {
     const pageSizes = [
+      { width: 840, height: 595 },
       { width: 840, height: 595 },
       { width: 840, height: 595 },
     ];
 
+    // Left-bound reader spreads are [back | front], [2 | 3], [4 | 5].
     expect(buildReaderSlots(pageSizes)).toEqual([
-      { sourceIndex: 0, part: "left" },
       { sourceIndex: 0, part: "right" },
       { sourceIndex: 1, part: "left" },
       { sourceIndex: 1, part: "right" },
+      { sourceIndex: 2, part: "left" },
+      { sourceIndex: 2, part: "right" },
+      { sourceIndex: 0, part: "left" },
     ]);
     expect(inferSinglePageSize(pageSizes)).toEqual({ width: 420, height: 595 });
+  });
+
+  it("keeps the outside cover spread intact on the first printer sheet", () => {
+    const pageSizes = Array.from({ length: 8 }, () => ({ width: 283.465, height: 170.079 }));
+    const slots = padSlotsForSaddleStitch(buildReaderSlots(pageSizes, "left"));
+    const [frontOfFirstSheet, backOfFirstSheet] = buildPrinterPairs(slots.length, "left");
+
+    expect(frontOfFirstSheet.map((pageNumber) => slots[pageNumber - 1])).toEqual([
+      { sourceIndex: 0, part: "left" },
+      { sourceIndex: 0, part: "right" },
+    ]);
+    expect(backOfFirstSheet.map((pageNumber) => slots[pageNumber - 1])).toEqual([
+      { sourceIndex: 1, part: "left" },
+      { sourceIndex: 7, part: "right" },
+    ]);
+  });
+
+  it("reads right-bound spread-only PDFs as [front | back] then right-to-left spreads", () => {
+    const pageSizes = [
+      { width: 840, height: 595 },
+      { width: 840, height: 595 },
+      { width: 840, height: 595 },
+    ];
+
+    // Right-bound reader spreads are [front | back], [3 | 2], [5 | 4].
+    expect(buildReaderSlots(pageSizes, "right")).toEqual([
+      { sourceIndex: 0, part: "left" },
+      { sourceIndex: 1, part: "right" },
+      { sourceIndex: 1, part: "left" },
+      { sourceIndex: 2, part: "right" },
+      { sourceIndex: 2, part: "left" },
+      { sourceIndex: 0, part: "right" },
+    ]);
+  });
+
+  it("reads right-bound reader spreads from right to left", () => {
+    const slots = buildReaderSlots(
+      [
+        { width: 420, height: 595 },
+        { width: 840, height: 595 },
+        { width: 420, height: 595 },
+      ],
+      "right",
+    );
+
+    expect(slots).toEqual([
+      { sourceIndex: 0, part: "full" },
+      { sourceIndex: 1, part: "right" },
+      { sourceIndex: 1, part: "left" },
+      { sourceIndex: 2, part: "full" },
+    ]);
+  });
+
+  it("uses the most common page size when only the cover has a different size", () => {
+    const pageSizes = [
+      { width: 198.425, height: 283.465 },
+      ...Array.from({ length: 15 }, () => ({ width: 283.465, height: 425.197 })),
+    ];
+    const layout = analyzeReaderLayout(pageSizes);
+
+    expect(layout.slots.every((slot) => slot.part === "full")).toBe(true);
+    expect(layout.singlePage).toEqual({ width: 283.465, height: 425.197 });
+    expect(layout.mismatchedSourceIndexes).toEqual([0]);
+  });
+
+  it("counts both halves of a spread when choosing the page size", () => {
+    const pageSizes = [
+      { width: 430, height: 605 },
+      { width: 840, height: 595 },
+      { width: 840, height: 595 },
+      { width: 430, height: 605 },
+    ];
+    const layout = analyzeReaderLayout(pageSizes);
+
+    expect(layout.slots).toHaveLength(6);
+    expect(layout.singlePage).toEqual({ width: 420, height: 595 });
+    expect(layout.mismatchedSourceIndexes).toEqual([0, 3]);
+  });
+
+  it("prefers the larger page size when page sizes are tied", () => {
+    const layout = analyzeReaderLayout([
+      { width: 198.425, height: 283.465 },
+      { width: 283.465, height: 425.197 },
+    ]);
+
+    expect(layout.singlePage).toEqual({ width: 283.465, height: 425.197 });
+    expect(layout.mismatchedSourceIndexes).toEqual([0]);
   });
 
   it("keeps ordinary one-page-per-sheet PDFs as full logical pages", () => {
